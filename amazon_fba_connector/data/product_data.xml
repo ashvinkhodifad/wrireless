@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<openerp>
+    <data noupdate="1">
+        <record id="product_product_fba_reimbursement_product_id" model="product.product">
+            <field name="default_code">REIMBURSEMENT</field>
+            <field name="list_price">0.0</field>
+            <field name="standard_price">0.0</field>
+            <field name="type">service</field>
+            <field name="name">FBA Reimbursement</field>
+            <field name="categ_id" ref="amazon_ept.amazon_product_categ_services"/>
+        </record>
+    </data>
+</openerp>

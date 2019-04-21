@@ -1,0 +1,16 @@
+<?xml version="1.0" ?>
+<odoo>
+    <record id="res_partner_view_apo_fpo_dpo" model="ir.ui.view">
+        <field name="name">res.partner.view.apo.fpo.dpo</field>
+        <field name="model">res.partner</field>
+        <field name="inherit_id" ref="base.view_partner_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//label[@for='street']" position="before">
+                <field name="apo_fpo_dpo"/>
+            </xpath>
+            <xpath expr="//field[@name='zip']" position="after">
+                <field name="zip_code_addon" placeholder="ZIPADDON" attrs="{'readonly': [('type', '=', 'contact'),('parent_id', '!=', False)], 'invisible': [('apo_fpo_dpo','=',False)]}"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>

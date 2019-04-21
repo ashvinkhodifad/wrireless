@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <record id="view_delivery_carrier_form_with_provider_stamps" model="ir.ui.view">
+        <field name="name">delivery.carrier.form.provider.stamps</field>
+        <field name="model">delivery.carrier</field>
+        <field name="inherit_id" ref="delivery.view_delivery_carrier_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='destination']" position='before'>
+                <page string="Stamps Configuration" attrs="{'invisible': [('delivery_type', '!=', 'stamps')]}">
+                    <button name="return_postage_wiz" string="Purchase Postage" type="object" class="oe_highlight" attrs="{'required': [('delivery_type', '=', 'stamps')]}"/>
+                    <button name="stamps_account_info" string="Current Postage" type="object" class="oe_highlight" attrs="{'required': [('delivery_type', '=', 'stamps')]}"/>
+                    <group>
+                        <group>
+                            <field name="stamps_username" attrs="{'required': [('delivery_type', '=', 'stamps')]}"/>
+                            <field name="stamps_password" attrs="{'required': [('delivery_type', '=', 'stamps')]}"/>
+                            <field name="stamps_integration_id" attrs="{'required': [('delivery_type', '=', 'stamps')]}"/>
+                            <field name="stamps_sample_check" attrs="{'required': [('delivery_type', '=', 'stamps')], 'invisible':[('prod_environment','=',True)]}"/>
+                        </group>
+                        <group>
+                            <field name="stamps_delivery_nature" attrs="{'required': [('delivery_type', '=', 'stamps')]}"/>
+                            <field name="stamps_default_service_type" attrs="{'required': [('delivery_type', '=', 'stamps')]}"/>
+                            <field name="stamps_package_name" attrs="{'required': [('delivery_type', '=', 'stamps')]}"/>
+                            <field name="stamps_label_file_type" attrs="{'required': [('delivery_type', '=', 'stamps')]}"/>
+                            <field name="stamps_content_type" attrs="{'required': [('delivery_type', '=', 'stamps')]}"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record model="ir.ui.view" id="add_postage_wizard_form">
+        <field name="name">add.postage.wizard.form</field>
+        <field name="model">postage.add</field>
+            <field name="arch" type="xml">
+                <form string="Change in Weight/Quantity">
+                    <group>
+                        <group>
+                            <field name="postage_amount" />
+                        </group>
+                    </group>
+                    <footer>
+                        <button name="add_postage" type="object" string="Purchase Postage" class="btn btn-primary"/>
+                        <button special="cancel" string="Close" class="btn-default"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+</odoo>
