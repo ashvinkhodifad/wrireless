@@ -63,6 +63,7 @@ class sale_order(models.Model):
             @return: True
         """
         stock_immediate_transfer_obj = self.env['stock.immediate.transfer']
+        stock_move_line_obj = self.env['stock.move.line']
         
         from_date = shipped_order_from_date.strftime("%Y-%m-%dT%H:%M:%S.000Z")
         to_date = shipped_order_to_date.strftime("%Y-%m-%dT%H:%M:%S.000Z")
