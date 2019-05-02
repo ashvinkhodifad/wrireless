@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="utf-8" ?>
+
+<odoo>
+	<data>
+	<!-- adding ebay instance field in helpdesk.ticket model -->
+	<record model="ir.ui.view" id="view_ebay_helpdesk_support_ept">
+		<field name="name">view.ebay.helpdesk.support.ept</field>
+		<field name="model">helpdesk.ticket</field>
+		<field name="inherit_id" ref="helpdesk.helpdesk_ticket_view_form"></field>
+		<field name="arch" type="xml">
+			<field name="priority" position="after">
+				<field name="ebay_instance_id" attrs="{'invisible':[('ebay_instance_id','=',False)]}" groups="base.group_no_one"></field>
+			</field>
+		</field>
+	</record>
+	
+	<!-- adding helpdesk team field in ebay instance ept -->
+	<record model="ir.ui.view" id="view_ebay_helpdek_team">
+		<field name="name">view.ebay.helpdesk.team</field>
+		<field name="model">ebay.instance.ept</field>
+		<field name="inherit_id" ref="ebay_ept.ebay_instance_form_view_ept"></field>
+		<field name="arch" type="xml">
+			<field name="name" position="after">
+				<field name="helpdesk_team_id"></field>
+			</field>
+		</field>
+	</record>
+	
+	<!-- adding helpdesk team field in ebay configuration -->
+	<record model="ir.ui.view" id="view_ebay_configuration_helpdek_team">
+		<field name="name">view.ebay.configuration.helpdesk.team</field>
+		<field name="model">res.config.settings</field>
+		<field name="inherit_id" ref="ebay_ept.view_ebay_config_settings"></field>
+		<field name="arch" type="xml">
+			<xpath expr="//div[hasclass('eBay')]" position="after">
+			  <div class="col-12 col-lg-6 o_setting_box">
+			     <div class="o_setting_right_pane">
+			         <label for="helpdesk_team_id" string="Helpdesk Team" />
+		             <div class="text-muted">
+						 Select helpdesk team for eBay
+					 </div>
+		              <div class="content-group">
+                          <div class="mt16">
+					      <field name="helpdesk_team_id" widget="selection" class="oe_inline" />
+					      </div>
+					   </div>
+					</div>
+				</div>
+			</xpath>
+		</field>
+	</record>
+	
+	<!--  generating automated action -->
+	<record model="base.automation" id="base_automated_action_rule_ebay_instance">
+		<field name="name">Ebay Order Instance</field>
+		<field name="trigger">on_create</field>
+		<field name="model_id" ref="model_helpdesk_ticket"></field>
+		<field name="state">code</field>
+		<field name="code">
+sale_order_obj=env['sale.order']        
+ebay_order=False
+for word in record.name.split():
+    if len(word.split('-'))==2:
+        ebay_order=word and sale_order_obj.search([('ebay_order_id','=',word)],limit=1) or False
+if ebay_order:
+    record.write({
+              'ebay_instance_id':ebay_order and ebay_order.ebay_instance_id.id or False,
+              'team_id':ebay_order and ebay_order.ebay_instance_id and ebay_order.ebay_instance_id.helpdesk_team_id and ebay_order.ebay_instance_id.helpdesk_team_id.id or False,
+              'sale_id':ebay_order and ebay_order.id or False})
+		</field>
+	</record>
+	
+	<!-- generating action for ebay -->
+	<record model="ir.actions.act_window" id="action_ebay_helpdesk_support_ept">
+		<field name="name">Helpdesk</field>
+		<field name="type">ir.actions.act_window</field>
+		<field name="res_model">helpdesk.ticket</field>
+		<field name="view_type">form</field>
+		<field name="view_mode">tree,form</field>
+		<field name="domain">[('ebay_instance_id','!=',False)]</field>
+	</record>
+	
+	
+	<menuitem id="menu_main_ebay_helpdesk" name="Helpdesk"
+			parent="ebay_ept.ebay_instance_menu_item" sequence="0" />
+
+	<menuitem id="menu_item_ebay_helpdesk_ticket" name="Ticket"
+		parent="menu_main_ebay_helpdesk" sequence="1"
+		action="action_ebay_helpdesk_support_ept" />
+	</data>
+</odoo>
