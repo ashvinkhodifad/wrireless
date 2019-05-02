@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+	<record id="view_order_form_extendeds" model="ir.ui.view">
+		<field name="name">helpdesk.ticket.order.tree</field>
+		<field name="model">helpdesk.ticket</field>
+		<field name="inherit_id" ref="helpdesk.helpdesk_ticket_view_form" />
+		<field name="arch" type="xml">
+			<field name="priority" position="after">
+				<field name="sale_id" options="{'no_create': True}"
+					domain="[('state','in',['sale','done'])]" />
+			</field>
+		</field>
+	</record>
+</odoo>
+            	
