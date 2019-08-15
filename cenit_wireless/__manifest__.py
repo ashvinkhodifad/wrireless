@@ -1,22 +1,22 @@
 # -*- coding: utf-8 -*-
 {
-    'name': "cenit_wireless",
+    'name': "Cenit Arion Wireless",
 
     'summary': """
-       Cenit Odoo module for Orion-Wireless company integration""",
+       Cenit Odoo module for Arion-Wireless company integration""",
 
     'description': """
         This module will integrate Odoo with Backmarket and Shipstation through Cenit Platform, for Orion-Wireless company.
     """,
 
-    'author': "Cenit",
+    'author': "Cenit IO",
     'website': "https://cenit.io/",
 
     # Categories can be used to filter modules in modules listing
     # Check https://github.com/odoo/odoo/blob/12.0/odoo/addons/base/data/ir_module_category_data.xml
     # for the full list
-    'category': 'Integration',
-    'version': '0.1.1',
+    'category': 'Extra Tools',
+    'version': '1.0.0',
 
     # any module necessary for this one to work correctly
     'depends': ['base', 'sale'],
