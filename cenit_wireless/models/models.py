@@ -80,7 +80,7 @@ class CenitSaleOrder(models.Model):
             }
         ]}
 
-    @api.one
+    @api.model
     def check_order_aviablity(self, order_id):
         return {'aviability':True}
 
