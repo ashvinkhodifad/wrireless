@@ -13,8 +13,10 @@ class CenitSaleOrder(models.Model):
     @api.depends('partner_id')
     @api.model
     def customer_verify(self):
+        import uuid
         return {'postdata_arr': [
             {
+                "id": str(uuid.uuid4()).replace('-',''),
                 "ExternalCode": "0002",
                 "Requester": "Odoo",
                 "AccountName": "Extensa-Test-Vincent2",
@@ -31,6 +33,7 @@ class CenitSaleOrder(models.Model):
                 "Valuta": "EUR"
             },
             {
+                "id": str(uuid.uuid4()).replace('-', ''),
                 "ExternalCode": "0002",
                 "Requester": "Odoo",
                 "AccountName": "Extensa-Test-Vincent2",
@@ -47,6 +50,7 @@ class CenitSaleOrder(models.Model):
                 "Valuta": "EUR"
             },
             {
+                "id": str(uuid.uuid4()).replace('-', ''),
                 "ExternalCode": "0002",
                 "Requester": "Odoo",
                 "AccountName": "Extensa-Test-Vincent2",
@@ -63,6 +67,7 @@ class CenitSaleOrder(models.Model):
                 "Valuta": "EUR"
             },
             {
+                "id": str(uuid.uuid4()).replace('-', ''),
                 "ExternalCode": "0002",
                 "Requester": "Odoo",
                 "AccountName": "Extensa-Test-Vincent2",
