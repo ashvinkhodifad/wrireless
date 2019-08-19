@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="stock_picking_view_form_inherit_serial_button" model="ir.ui.view">
+        <field name="name">stock.picking.view.form.inherit.serial.button</field>
+        <field name="model">stock.picking</field>
+        <field name="inherit_id" ref="stock.view_picking_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header[last()]" position="inside">
+                <button name="button_assign_serial" attrs="{'invisible': [('picking_type_code', '!=', 'incoming')]}" string="Assign Serial" type="object" groups="stock.group_stock_user"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
