@@ -2,6 +2,10 @@
 
 from odoo import models, fields, api, _
 
+import logging
+
+_logger = logging.getLogger(__name__)
+
 
 class CenitSaleOrder(models.Model):
     _inherit = "sale.order"
@@ -137,10 +141,10 @@ class CenitSaleOrder(models.Model):
 
     @api.model
     def save_backmarket_order(self, order):
-        print(order)
+        _logger.info(str(order))
         return {'success': True, 'message': 'Order created'}
 
     @api.model
     def check_backmarket_order_status(self, bm_id):
-        print(bm_id)
+        _logger.info(str(bm_id))
         return {'success': True, 'state': 3}
