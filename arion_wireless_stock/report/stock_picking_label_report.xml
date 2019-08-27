@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <template id="report_stock_picking_label">
+        <t t-foreach="pick.move_line_ids" t-as="move">
+            <div class="page">
+                <div class="row" style="page-break-after: always;">
+                    <table class="table mb-0">
+                        <tr>
+                            <th class="table-active text-left">
+                                <strong t-field="move.product_id.display_name"/>
+                            </th>
+                        </tr>
+                        <tr class="mb-0">
+                            <td class="text-center">
+                                <t t-if="move.product_id.default_code">
+                                    <img alt="Barcode" t-if="len(move.product_id.default_code) == 13" t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('EAN13', move.product_id.default_code, 600, 50)" />
+                                    <img alt="Barcode" t-elif="len(move.product_id.default_code) == 8" t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('EAN8', move.product_id.default_code, 600, 50)" />
+                                    <img alt="Barcode" t-else="" t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('Code128', move.product_id.default_code, 600, 50)" />
+                                    Code: <span t-field="move.product_id.default_code"/>
+                                </t>
+                                <t t-else=""><span class="text-muted">No reference available</span></t>
+                                <t t-if="move.lot_id">
+                                    <img alt="Barcode" t-if="len(move.lot_id.name) == 13" t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('EAN13', move.lot_id.name, 600, 50)" />
+                                    <img alt="Barcode" t-elif="len(move.lot_id.name) == 8" t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('EAN8', move.lot_id.name, 600, 50)" />
+                                    <img alt="Barcode" t-else="" t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('Code128', move.lot_id.name, 600, 50)" />
+                                    Serial: <span t-field="move.lot_id.name"/>
+                                </t>
+                                <t t-else=""><br/><span class="text-muted">No serial available</span></t>
+                                <t t-if="move.product_id.barcode">
+                                    <img alt="Barcode" t-if="len(move.product_id.barcode) == 13" t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('EAN13', move.product_id.barcode, 600, 50)" />
+                                    <img alt="Barcode" t-elif="len(move.product_id.barcode) == 8" t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('EAN8', move.product_id.barcode, 600, 50)" />
+                                    <img alt="Barcode" t-else="" t-att-src="'/report/barcode/?type=%s&amp;value=%s&amp;width=%s&amp;height=%s' % ('Code128', move.product_id.barcode, 600, 50)" />
+                                    Barcode: <span t-field="move.product_id.barcode"/>
+                                </t>
+                                <t t-else=""><br/><span class="text-muted">No barcode available</span></t>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </t>
+    </template>
+    <template id="report_pickinglabel">
+        <t t-call="web.basic_layout">
+            <t t-foreach="docs" t-as="picking">
+                <t t-call="arion_wireless_stock.report_stock_picking_label">
+                    <t t-set="pick" t-value="picking"/>
+                </t>
+            </t>
+        </t>
+    </template>
+    <report 
+        id="action_report_stock_picking_label"
+        string="Picking Label"
+        model="stock.picking" 
+        report_type="qweb-pdf"
+        file="arion_wireless_stock.report_pickinglabel" 
+        name="arion_wireless_stock.report_pickinglabel"
+        print_report_name="'Stock Picking - %s' % (object.name)"
+    />
+    <record id="action_report_stock_picking_label" model="ir.actions.report">
+        <field name="paperformat_id" ref="arion_wireless_stock.paperformat_stock_picking_label"/>
+        <field name="multi">False</field>
+    </record>
+</odoo>
