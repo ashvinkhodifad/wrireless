@@ -17,14 +17,13 @@ class ProductTemplate(models.Model):
     def _compute_quantities(self):
         res = self._compute_quantities_dict()
         for template in self:
-            available_kit_qty = 0
-            if template.bom_ids:
-                for product in template.product_variant_ids:
-                    available_kit_qty += product._get_availability_kit_qty()
+            available_kit_qty = res[template.id]['qty_available']
+            if template.bom_ids and template.bom_ids[0].type == 'phantom':
+                available_kit_qty = sum(template.product_variant_ids.mapped('qty_available'))
             template.outgoing_qty = res[template.id]['outgoing_qty']
             template.virtual_available = res[template.id]['virtual_available']
             template.incoming_qty = res[template.id]['incoming_qty']
-            template.qty_available = template.bom_ids and available_kit_qty or res[template.id]['qty_available']
+            template.qty_available = available_kit_qty
 
 
 class ProductProduct(models.Model):
@@ -34,10 +33,17 @@ class ProductProduct(models.Model):
 
     def _get_availability_kit_qty(self):
         MrpBom = self.env['mrp.bom']
+        MrpBomLine = self.env['mrp.bom.line']
         bom = MrpBom._bom_find(product_tmpl=self.product_tmpl_id, product=self, company_id=self.company_id.id)
         if bom and bom.type == 'phantom':
             products = {}
-            for line in bom.bom_line_ids.filtered(lambda l: l.attribute_value_ids.ids in self.attribute_value_ids.ids or not l.attribute_value_ids):
+            MrpBomLine |= bom.bom_line_ids.filtered(lambda l: not l.attribute_value_ids)
+            attr = []
+            for l in bom.bom_line_ids.filtered(lambda l: l.attribute_value_ids):
+                attr = [a for a in l.attribute_value_ids if a in self.attribute_value_ids]
+                if len(attr) == len(l.attribute_value_ids):
+                    MrpBomLine |= l
+            for line in MrpBomLine:
                 qty = line.product_qty
                 if line.product_id.id in products.keys():
                     products[line.product_id.id]['qty'] += qty
