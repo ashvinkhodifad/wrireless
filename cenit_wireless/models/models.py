@@ -19,12 +19,59 @@ class CenitSaleOrder(models.Model):
 
     @api.model
     def check_order_aviablity(self, order_ids):
+        order_ids =[{}]
         return {'orders': order_ids}
 
     @api.model
     def save_backmarket_order_real(self, order):
         from dateutil.parser import parse
         import datetime
+        #order_temp = order[0]
+        order_temp = [{'state': 9,
+                       'shipping_address': {'first_name': 'sherman',
+                                            'last_name': 'shapiro',
+                                            'gender': 0, 'street': '412 Windchime Dr',
+                                            'postal_code': '28412',
+                                            'country': 'US', 'city': 'Wilmington',
+                                            'phone': '5166623766',
+                                            'email': 'client_54333_72108@backmarket.com',
+                                            'state_or_province': 'NC'},
+                       'billing_address': {'first_name': 'sherman',
+                                           'last_name': 'shapiro', 'gender': 0,
+                                           'street': '412 Windchime Dr',
+                                           'postal_code': '28412',
+                                           'country': 'US', 'city': 'Wilmington',
+                                           'phone': '5166623766',
+                                           'email': 'client_54333_72108@backmarket.com',
+                                           'state_or_province': 'NC'},
+                       'delivery_note': 'https://backmarket-prd-us.s3.amazonaws.com/delivery_form/Bon_livraison_72108.pdf?Signature=M%2Fu%2B%2FgIN3EqqQX5Ue1HTXwidwu0%3D&Expires=1567707270&AWSAccessKeyId=AKIAJCL3CGZX5LRTF7WQ',
+                       'tracking_number': '9405511699000439005105',
+                       'tracking_url': 'https://backmarket.kronoscare.fr/b6f085a82711472d92bc?lang=en',
+                       'shipper': 'USPS',
+                       'shipper_display': 'USPS',
+                       'date_creation': '2019-03-09',
+                       'date_modification': '2019-03-11',
+                       'date_shipping': '2019-03-11',
+                       'date_payment': '2019-03-09',
+                       'price': '239.00',
+                       'shipping_price': '0.00',
+                       'currency': 'USD',
+                       'country_code': 'en-us',
+                       'installment_payment': False,
+                       'payment_method': 'CARD',
+                       'orderlines': [
+                           {'id': 73218,
+                            'date_creation': '2019-03-09',
+                            'state': 3, 'price': '239.00',
+                            'shipping_price': '0.00',
+                            'shipping_delay': 83.0,
+                            'shipper': 'USPS - Priority Mail',
+                            'currency': 'USD', 'return_reason': 0,
+                            'listing': 'APIPH7MB05_03W',
+                            'product': 'iPhone 7 32GB Black - Unlocked', 'quantity': 1,
+                            'brand': 'Apple',
+                            'product_id': 16276}],
+                       'bm_id': 72108}]
         if order:
             partner_manager = self.env['res.partner']
             partner_title_manager = self.env['res.partner.title']
@@ -34,7 +81,7 @@ class CenitSaleOrder(models.Model):
             country_manager = self.env['res.country']
 
             order_partner = partner_manager.search(
-                [('name', 'ilike', '%s %s' % (order['first_name'], order['last_name']))], limit=1)
+                [('name', 'ilike', '%s %s' % (order['billing_address']['first_name'], order['billing_address']['last_name']))], limit=1)
 
             if not order_partner:
                 partner_insert_dict = {
@@ -52,6 +99,7 @@ class CenitSaleOrder(models.Model):
 
                 order_partner = partner_manager.create(partner_insert_dict)
 
+            #creand order
             order_insert_dict = {
                 'name': 'BackMarket order' % (order['bm_id']),
                 'origin': 'Backmarket order %s' % (order['bm_id']),
