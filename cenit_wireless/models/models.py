@@ -26,100 +26,81 @@ class CenitSaleOrder(models.Model):
     def save_backmarket_order_real(self, order):
         from dateutil.parser import parse
         import datetime
-        #order_temp = order[0]
-        order_temp = [{'state': 9,
-                       'shipping_address': {'first_name': 'sherman',
-                                            'last_name': 'shapiro',
-                                            'gender': 0, 'street': '412 Windchime Dr',
-                                            'postal_code': '28412',
-                                            'country': 'US', 'city': 'Wilmington',
-                                            'phone': '5166623766',
-                                            'email': 'client_54333_72108@backmarket.com',
-                                            'state_or_province': 'NC'},
-                       'billing_address': {'first_name': 'sherman',
-                                           'last_name': 'shapiro', 'gender': 0,
-                                           'street': '412 Windchime Dr',
-                                           'postal_code': '28412',
-                                           'country': 'US', 'city': 'Wilmington',
-                                           'phone': '5166623766',
-                                           'email': 'client_54333_72108@backmarket.com',
-                                           'state_or_province': 'NC'},
-                       'delivery_note': 'https://backmarket-prd-us.s3.amazonaws.com/delivery_form/Bon_livraison_72108.pdf?Signature=M%2Fu%2B%2FgIN3EqqQX5Ue1HTXwidwu0%3D&Expires=1567707270&AWSAccessKeyId=AKIAJCL3CGZX5LRTF7WQ',
-                       'tracking_number': '9405511699000439005105',
-                       'tracking_url': 'https://backmarket.kronoscare.fr/b6f085a82711472d92bc?lang=en',
-                       'shipper': 'USPS',
-                       'shipper_display': 'USPS',
-                       'date_creation': '2019-03-09',
-                       'date_modification': '2019-03-11',
-                       'date_shipping': '2019-03-11',
-                       'date_payment': '2019-03-09',
-                       'price': '239.00',
-                       'shipping_price': '0.00',
-                       'currency': 'USD',
-                       'country_code': 'en-us',
-                       'installment_payment': False,
-                       'payment_method': 'CARD',
-                       'orderlines': [
-                           {'id': 73218,
-                            'date_creation': '2019-03-09',
-                            'state': 3, 'price': '239.00',
-                            'shipping_price': '0.00',
-                            'shipping_delay': 83.0,
-                            'shipper': 'USPS - Priority Mail',
-                            'currency': 'USD', 'return_reason': 0,
-                            'listing': 'APIPH7MB05_03W',
-                            'product': 'iPhone 7 32GB Black - Unlocked', 'quantity': 1,
-                            'brand': 'Apple',
-                            'product_id': 16276}],
-                       'bm_id': 72108}]
-        if order:
+        order_temp = order[0]
+
+        if order_temp:
             partner_manager = self.env['res.partner']
             partner_title_manager = self.env['res.partner.title']
             currency_manager = self.env['res.currency']
+            country_manager = self.env['res.country']
             product_manager = self.env['product.product']
             order_manager = self.env['sale.order']
-            country_manager = self.env['res.country']
+            order_line_manager = self.env['sale.order.line']
 
             order_partner = partner_manager.search(
-                [('name', 'ilike', '%s %s' % (order['billing_address']['first_name'], order['billing_address']['last_name']))], limit=1)
+                [('name', 'ilike', '%s %s' % (order_temp['billing_address']['first_name'], order_temp['billing_address']['last_name']))], limit=1)
+
+            partner_shipping = partner_manager.search(
+                [('name', 'ilike', '%s %s' % (order_temp['shipping_address']['first_name'], order_temp['shipping_address']['last_name']))], limit=1)
 
             if not order_partner:
                 partner_insert_dict = {
-                    'name': '%s %s'%(order['billing_address']['first_name'],order['billing_address']['last_name']),
+                    'name': '%s %s'%(order_temp['billing_address']['first_name'],order_temp['billing_address']['last_name']),
                     'type': 'contact',
-                    'title': partner_title_manager.search([('name','ilike','Mr')], limit=1) if order['billing_address']['gender'] == 0 else partner_title_manager.search([('name','ilike','Miss')],limit=1),
-                    'street': order['billing_address']['street'],
-                    'street2': order['billing_address']['street2'],
-                    'city': order['billing_address']['city'],
-                    'country': country_manager.search([('code','ilike',order['billing_address']['country'].split('-')[0])], limit=1) if order['billing_address']['country'] else None,
-                    'zip': order['billing_address']['postal_code'],
-                    'phone': order['billing_address']['phone'],
-                    'email': order['billing_address']['email']
+                    'title': partner_title_manager.search([('name','ilike','Mr')], limit=1) if order_temp['billing_address']['gender'] == 0 else partner_title_manager.search([('name','ilike','Miss')],limit=1),
+                    'street': order_temp['billing_address']['street'],
+                    'street2': order_temp['billing_address']['street2'],
+                    'city': order_temp['billing_address']['city'],
+                    'country': country_manager.search([('code','=', str(order_temp['billing_address']['country'].split('-')[1].upper()))], limit=1) if order_temp['billing_address']['country'] else None,
+                    'zip': order_temp['billing_address']['postal_code'],
+                    'phone': order_temp['billing_address']['phone'],
+                    'email': order_temp['billing_address']['email']
                 }
 
                 order_partner = partner_manager.create(partner_insert_dict)
 
             #creand order
             order_insert_dict = {
-                'name': 'BackMarket order' % (order['bm_id']),
-                'origin': 'Backmarket order %s' % (order['bm_id']),
+                'name': 'BackMarket order %s' % (order_temp['bm_id']),
+                'origin': 'Backmarket order %s' % (order_temp['bm_id']),
                 'state': 'draft',
-                'date_order': parse(order['date_creation']) if order[
+                'date_order': parse(order_temp['date_creation']) if order_temp[
                     'date_creation'] else datetime.datetime.now(),
-                'validity_date': parse(order['date_modification']) if order[
+                'validity_date': parse(order_temp['date_modification']) if order_temp[
                     'date_modification'] else datetime.datetime.now(),
-                'create_date': parse(order['date_creation']) if order[
+                'create_date': parse(order_temp['date_creation']) if order_temp[
                     'date_creation'] else datetime.datetime.now(),
                 'confirmation_date': datetime.datetime.now(),
                 'partner_id': order_partner,
                 'partner_invoice_id': order_partner,
-                'partner_shipping_id': order_partner,
-                'currency_id': currency_manager.search([('name','=',order['currency'])], limit=1) if order['currency'] else currency_manager.search([('name','=','USD')], limit=1),
-
+                'partner_shipping_id': partner_shipping or order_partner,
+                'currency_id': currency_manager.search([('name','=',order_temp['currency'])], limit=1) if order_temp['currency'] else currency_manager.search([('name','=','USD')], limit=1),
+                'bm_id': order_temp['bm_id']
             }
 
+            new_order = order_manager.create(order_insert_dict)
+            for orderline in order_temp['orderlines'] :
+                product = product_manager.search([('default_code', '=', orderline['listing'])], limit=1)
+                if not product:
+                    # Send an email with order.bm_id and orderline.bm_id equal order_temp['bm_id']
+                    pass
+                ol_dict = {
+                    'bm_id': order_temp['bm_id'],
+                    'order_id': new_order.id,
+                    'name': product.product_tmpl_id.name if product else 'BackMarket orderline %s' % (order_temp['bm_id']),
+                    'price_unit': orderline['price'],
+                    'product_uom_qty': orderline['quantity'],
+                    'customer_lead': 0, #Esto no c lo que es pero es NOT NULL
+                    'create_date': parse(orderline['date_creation']) if orderline['date_creation'] else datetime.datetime.now(),
+                    'currency_id': currency_manager.search([('name','=',orderline['currency'])], limit=1) if orderline['currency'] else currency_manager.search([('name','=','USD')], limit=1),
+                    'product_id': product if product else None
+                }
+                order_line_manager.create(ol_dict)
+
+            return {'success': True, 'message': 'Order created successfully', 'order_name': new_order.name}
+
         else:
-            return {'success': True, 'message': 'Order created'}
+            return {'success': False, 'message': 'Empty order'}
 
     @api.model
     def save_backmarket_order(self, order):
