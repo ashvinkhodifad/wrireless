@@ -89,6 +89,7 @@ class CenitSaleOrder(models.Model):
                     'order_id': new_order.id,
                     'name': product.product_tmpl_id.name if product else 'BackMarket orderline %s' % (order_temp['bm_id']),
                     'price_unit': orderline['price'],
+                    #'state': '' Aqui no se que state ponerle, por ejemplo la orderline trae 3 como state pero eso en Odoo no c que es
                     'product_uom_qty': orderline['quantity'],
                     'customer_lead': 0, #Esto no c lo que es pero es NOT NULL
                     'create_date': parse(orderline['date_creation']) if orderline['date_creation'] else datetime.datetime.now(),
