@@ -47,11 +47,10 @@ class CenitSaleOrder(models.Model):
                 partner_insert_dict = {
                     'name': '%s %s'%(order_temp['billing_address']['first_name'],order_temp['billing_address']['last_name']),
                     'type': 'contact',
-                    'title': partner_title_manager.search([('name','ilike','Mr')], limit=1) if order_temp['billing_address']['gender'] == 0 else partner_title_manager.search([('name','ilike','Miss')],limit=1),
+                    'title': partner_title_manager.search([('name','=','Mr.')], limit=1) if order_temp['billing_address']['gender'] == 0 else partner_title_manager.search([('name','=','Miss')],limit=1),
                     'street': order_temp['billing_address']['street'],
-                    'street2': order_temp['billing_address']['street2'],
                     'city': order_temp['billing_address']['city'],
-                    'country': country_manager.search([('code','=', str(order_temp['billing_address']['country'].split('-')[1].upper()))], limit=1) if order_temp['billing_address']['country'] else None,
+                    'country': country_manager.search([('code','=', order_temp['billing_address']['country'])], limit=1) if order_temp['billing_address']['country'] else None,
                     'zip': order_temp['billing_address']['postal_code'],
                     'phone': order_temp['billing_address']['phone'],
                     'email': order_temp['billing_address']['email']
@@ -71,10 +70,11 @@ class CenitSaleOrder(models.Model):
                 'create_date': parse(order_temp['date_creation']) if order_temp[
                     'date_creation'] else datetime.datetime.now(),
                 'confirmation_date': datetime.datetime.now(),
-                'partner_id': order_partner,
-                'partner_invoice_id': order_partner,
-                'partner_shipping_id': partner_shipping or order_partner,
-                'currency_id': currency_manager.search([('name','=',order_temp['currency'])], limit=1) if order_temp['currency'] else currency_manager.search([('name','=','USD')], limit=1),
+                'partner_id': order_partner.id,
+                'partner_invoice_id': order_partner.id,
+                'partner_shipping_id': partner_shipping.id if partner_shipping else order_partner.id,
+                #'currency_id': currency_manager.search([('name','=',order_temp['currency'])], limit=1).id if order_temp['currency'] else currency_manager.search([('name','=','USD')], limit=1).id,
+                'pricelist_id': self.env['product.pricelist'].search([('name', '=', 'Public Pricelist'), ('active', '=', True)], limit=1).id,
                 'bm_id': order_temp['bm_id']
             }
 
@@ -82,19 +82,21 @@ class CenitSaleOrder(models.Model):
             for orderline in order_temp['orderlines'] :
                 product = product_manager.search([('default_code', '=', orderline['listing'])], limit=1)
                 if not product:
-                    # Send an email with order.bm_id and orderline.bm_id equal order_temp['bm_id']
+                    # Send an email with order.bm_id and orderline.bm_id equal to order_temp['bm_id']
                     pass
                 ol_dict = {
                     'bm_id': order_temp['bm_id'],
                     'order_id': new_order.id,
                     'name': product.product_tmpl_id.name if product else 'BackMarket orderline %s' % (order_temp['bm_id']),
                     'price_unit': orderline['price'],
-                    #'state': '' Aqui no se que state ponerle, por ejemplo la orderline trae 3 como state pero eso en Odoo no c que es
-                    'product_uom_qty': orderline['quantity'],
+                    #'state': '' Aqui no se que state ponerle, por ejemplo la orderline trae 3 como state pero eso en Odoo cual es (draft, sent, sale ...)
+                    'product_id': product if product else None,
+                    'product_uom': product.product_tmpl_id.uom_id if product else None,
+                    'product_uom_qty': orderline['quantity'] if product else None,
                     'customer_lead': 0, #Esto no c lo que es pero es NOT NULL
                     'create_date': parse(orderline['date_creation']) if orderline['date_creation'] else datetime.datetime.now(),
-                    'currency_id': currency_manager.search([('name','=',orderline['currency'])], limit=1) if orderline['currency'] else currency_manager.search([('name','=','USD')], limit=1),
-                    'product_id': product if product else None
+                    'currency_id': currency_manager.search([('name','=',orderline['currency'])], limit=1).id if orderline['currency'] else currency_manager.search([('name','=','USD')], limit=1).id,
+                    'display_type': '' if product else 'line_section'
                 }
                 order_line_manager.create(ol_dict)
 

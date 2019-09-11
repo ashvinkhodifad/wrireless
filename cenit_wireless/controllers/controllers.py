@@ -1,20 +1,15 @@
 # -*- coding: utf-8 -*-
 from odoo import http
 
-# class CenitWireless(http.Controller):
-#     @http.route('/cenit_wireless/cenit_wireless/', auth='public')
-#     def index(self, **kw):
-#         return "Hello, world"
+class CenitWireless(http.Controller):
 
-#     @http.route('/cenit_wireless/cenit_wireless/objects/', auth='public')
-#     def list(self, **kw):
-#         return http.request.render('cenit_wireless.listing', {
-#             'root': '/cenit_wireless/cenit_wireless',
-#             'objects': http.request.env['cenit_wireless.cenit_wireless'].search([]),
-#         })
+    @http.route(['/cenit_wireless/manage_order/'], auth='none', type='http', csrf=False)
+    def manage_order(self, **kw):
+        print(http.request)
+        return "Hello, world"
 
-#     @http.route('/cenit_wireless/cenit_wireless/objects/<model("cenit_wireless.cenit_wireless"):obj>/', auth='public')
-#     def object(self, obj, **kw):
-#         return http.request.render('cenit_wireless.object', {
-#             'object': obj
-#         })
+
+    @http.route('/cenit_wireless/manage_orderline/', auth='public')
+    def manage_orderline(self, **kw):
+        print(http.request)
+        return "Hello, world"
