@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 from odoo import models, fields, api, _
 
 import logging
@@ -10,20 +9,34 @@ class CenitSaleOrderLine(models.Model):
     _inherit = "sale.order.line"
 
     bm_id = fields.Char(string=_('Backmarket id'))
+    bm_state = fields.Integer(string=_('Backmarket Orderline State'))
 
 
 class CenitSaleOrder(models.Model):
     _inherit = "sale.order"
 
     bm_id = fields.Char(string=_('Backmarket id'))
+    bm_state = fields.Integer(string=_('Backmarket Order State'))
 
     @api.model
     def check_order_aviablity(self, order_ids):
-        order_ids =[{}]
-        return {'orders': order_ids}
+        #orders =[{'bm_id': 1, 'bm_state': 2, 'orderline': [{'bm_id': 1, 'bm_state': 2}, {'bm_id': 1, 'bm_state': 2}]}]
+        orders = self.env['sale.order'].search([('bm_id', 'in', order_ids)])
+        result = []
+        for order in orders:
+            tmp = {'bm_id': order.bm_id, 'bm_state': order.bm_state, 'tracking_url': ''}
+            ol_reults = []
+            for orderline in order.order_line:
+                tmp2 = {'bm_id': orderline.bm_id, 'bm_state': orderline.bm_state}
+                ol_reults.append(tmp2)
+            tmp['orderlines'] = ol_reults
+            result.append(tmp)
+
+        return result
+
 
     @api.model
-    def save_backmarket_order_real(self, order):
+    def save_backmarket_order(self, order):
         from dateutil.parser import parse
         import datetime
         order_temp = order[0]
@@ -63,6 +76,7 @@ class CenitSaleOrder(models.Model):
                 'name': 'BackMarket order %s' % (order_temp['bm_id']),
                 'origin': 'Backmarket order %s' % (order_temp['bm_id']),
                 'state': 'draft',
+                'bm_state': 1,
                 'date_order': parse(order_temp['date_creation']) if order_temp[
                     'date_creation'] else datetime.datetime.now(),
                 'validity_date': parse(order_temp['date_modification']) if order_temp[
@@ -85,11 +99,12 @@ class CenitSaleOrder(models.Model):
                     # Send an email with order.bm_id and orderline.bm_id equal to order_temp['bm_id']
                     pass
                 ol_dict = {
-                    'bm_id': order_temp['bm_id'],
+                    'bm_id': orderline['id'],
                     'order_id': new_order.id,
-                    'name': product.product_tmpl_id.name if product else 'BackMarket orderline %s' % (order_temp['bm_id']),
+                    'name': product.product_tmpl_id.name if product else 'BackMarket orderline %s' % (orderline['id']),
                     'price_unit': orderline['price'],
-                    #'state': '' Aqui no se que state ponerle, por ejemplo la orderline trae 3 como state pero eso en Odoo cual es (draft, sent, sale ...)
+                    'state': 'draft',
+                    'bm_state': orderline['state'] or 1,
                     'product_id': product if product else None,
                     'product_uom': product.product_tmpl_id.uom_id if product else None,
                     'product_uom_qty': orderline['quantity'] if product else None,
@@ -105,10 +120,10 @@ class CenitSaleOrder(models.Model):
         else:
             return {'success': False, 'message': 'Empty order'}
 
-    @api.model
-    def save_backmarket_order(self, order):
-        _logger.info(str(order))
-        return {'success': True, 'message': 'Order created'}
+    # @api.model
+    # def save_backmarket_order(self, order):
+    #     _logger.info(str(order))
+    #     return {'success': True, 'message': 'Order created'}
 
     @api.model
     def check_backmarket_order_status(self, bm_id):
