@@ -1,5 +1,4 @@
 # -*- coding: utf-8 -*-
-
 from odoo import models, fields, api, _
 
 import logging
@@ -21,8 +20,20 @@ class CenitSaleOrder(models.Model):
 
     @api.model
     def check_order_aviablity(self, order_ids):
-        order_ids =[{}]
-        return {'orders': order_ids}
+        #orders =[{'bm_id': 1, 'bm_state': 2, 'orderline': [{'bm_id': 1, 'bm_state': 2}, {'bm_id': 1, 'bm_state': 2}]}]
+        orders = self.env['sale.order'].search([('bm_id', 'in', order_ids)])
+        result = []
+        for order in orders:
+            tmp = {'bm_id': order.bm_id, 'bm_state': order.bm_state, 'tracking_url': ''}
+            ol_reults = []
+            for orderline in order.order_line:
+                tmp2 = {'bm_id': orderline.bm_id, 'bm_state': orderline.bm_state}
+                ol_reults.append(tmp2)
+            tmp['orderlines'] = ol_reults
+            result.append(tmp)
+
+        return result
+
 
     @api.model
     def save_backmarket_order(self, order):
