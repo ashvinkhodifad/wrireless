@@ -27,7 +27,8 @@ class CenitSaleOrder(models.Model):
             tmp = {'bm_id': order.bm_id, 'bm_state': order.bm_state}
             ol_reults = []
             for orderline in order.order_line:
-                tmp2 = {'bm_id': orderline.bm_id, 'new_state': orderline.bm_state, 'sku': orderline.product_id.default_code, 'tracking_number': ''}
+                tmp2 = {'bm_id': orderline.bm_id, 'new_state': orderline.bm_state,
+                        'sku': orderline.product_id.default_code, 'tracking_number': ''}
                 ol_reults.append(tmp2)
             tmp['orderlines'] = ol_reults
             result.append(tmp)
@@ -73,9 +74,7 @@ class CenitSaleOrder(models.Model):
 
             #creand order
             order_insert_dict = {
-                'name': 'BM%s' % (order_temp['bm_id']),
-                'origin': 'Backmarket order %s' % (order_temp['bm_id']),
-                'name': 'BackMarket order %s' % (order_temp.get('bm_id')),
+                'name': 'BM%s' % (order_temp.get('bm_id')),
                 'origin': 'Backmarket order %s' % (order_temp.get('bm_id')),
                 'state': 'draft',
                 'bm_state': 1,
