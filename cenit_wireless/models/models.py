@@ -19,15 +19,15 @@ class CenitSaleOrder(models.Model):
     bm_state = fields.Integer(string=_('Backmarket Order State'))
 
     @api.model
-    def check_order_aviablity(self, order_ids):
-        #orders =[{'bm_id': 1, 'bm_state': 2, 'orderline': [{'bm_id': 1, 'bm_state': 2}, {'bm_id': 1, 'bm_state': 2}]}]
+    def check_backmarket_order_status(self, order_ids):
+        picking_manager = self.env['stock.picking']
         orders = self.env['sale.order'].search([('bm_id', 'in', order_ids)])
         result = []
         for order in orders:
-            tmp = {'bm_id': order.bm_id, 'bm_state': order.bm_state, 'tracking_url': ''}
+            tmp = {'bm_id': order.bm_id, 'bm_state': order.bm_state}
             ol_reults = []
             for orderline in order.order_line:
-                tmp2 = {'bm_id': orderline.bm_id, 'bm_state': orderline.bm_state}
+                tmp2 = {'bm_id': orderline.bm_id, 'new_state': orderline.bm_state, 'sku': orderline.product_id.default_code, 'tracking_number': ''}
                 ol_reults.append(tmp2)
             tmp['orderlines'] = ol_reults
             result.append(tmp)
@@ -73,6 +73,8 @@ class CenitSaleOrder(models.Model):
 
             #creand order
             order_insert_dict = {
+                'name': 'BM%s' % (order_temp['bm_id']),
+                'origin': 'Backmarket order %s' % (order_temp['bm_id']),
                 'name': 'BackMarket order %s' % (order_temp.get('bm_id')),
                 'origin': 'Backmarket order %s' % (order_temp.get('bm_id')),
                 'state': 'draft',
@@ -117,13 +119,3 @@ class CenitSaleOrder(models.Model):
 
         else:
             return {'success': False, 'message': 'Empty order'}
-
-    # @api.model
-    # def save_backmarket_order(self, order):
-    #     _logger.info(str(order))
-    #     return {'success': True, 'message': 'Order created'}
-
-    @api.model
-    def check_backmarket_order_status(self, bm_id):
-        _logger.info(str(bm_id))
-        return {'success': True, 'state': 3}
