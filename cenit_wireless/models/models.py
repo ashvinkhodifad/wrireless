@@ -20,6 +20,7 @@ class CenitSaleOrder(models.Model):
 
     @api.model
     def check_backmarket_order_status(self, order_ids):
+        picking_manager = self.env['stock.picking']
         orders = self.env['sale.order'].search([('bm_id', 'in', order_ids)])
         result = []
         for order in orders:
@@ -72,7 +73,7 @@ class CenitSaleOrder(models.Model):
 
             #creand order
             order_insert_dict = {
-                'name': 'BackMarket order %s' % (order_temp['bm_id']),
+                'name': 'BM%s' % (order_temp['bm_id']),
                 'origin': 'Backmarket order %s' % (order_temp['bm_id']),
                 'state': 'draft',
                 'bm_state': 1,
