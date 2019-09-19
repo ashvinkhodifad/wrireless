@@ -21,42 +21,51 @@
 
 import logging, os
 
-from odoo import models, fields, api, _
+from odoo import models, fields, api
 
 
 _logger = logging.getLogger(__name__)
 
-class CenitWirelessSettings(models.TransientModel):
-    _name = "cenit.wireless.settings"
+COLLECTION_NAME = "shipstation"
+COLLECTION_VERSION = "1.0.0"
+COLLECTION_PARAMS = {
+    'Shipstation API Key':'key',
+    'Shipstation API Secret':'secret',
+    'Shipstation Store':'store_id',
+}
+
+class CenitIntegrationSettings(models.TransientModel):
+    _name = "cenit.shipstation.settings"
     _inherit = 'res.config.settings'
 
     ############################################################################
     # Pull Parameters
     ############################################################################
-    email = fields.Char('Email for notifications')
-    enabled_err_msg = fields.Boolean(string=_('Enable error messages'), default=True)
-    enable_sync_msg = fields.Boolean(string=_('Enable sync events messages'), default=False)
+    key = fields.Char('Shipstation API Key')
+    secret = fields.Char('Shipstation API Secret')
+    store_id = fields.Char('Shipstation Store')
 
     ############################################################################
     # Default Getters
     ############################################################################
-    def get_values_email(self):
-        email = self.env['ir.config_parameter'].get_param(
-            'odoo_cenit.wireless.email', default=None
+    def get_values_key(self):
+        key = self.env['ir.config_parameter'].get_param(
+            'odoo_cenit.shipstation.key', default=None
         )
-        return {'key': email or ''}
+        return {'key': key or ''}
 
-    def get_values_errmsg(self):
-        err_msg = self.env['ir.config_parameter'].get_param(
-            'odoo_cenit.wireless.errmsg', default=None
+    def get_values_secret(self):
+        secret = self.env['ir.config_parameter'].get_param(
+            'odoo_cenit.shipstation.secret', default=None
         )
-        return {'secret': err_msg or ''}
+        return {'secret': secret or ''}
 
-    def get_values_syncmsg(self):
-        sync_msg = self.env['ir.config_parameter'].get_param(
-            'odoo_cenit.wireless.syncmsg', default=None
+    def get_values_store_id(self):
+        store_id = self.env['ir.config_parameter'].get_param(
+            'odoo_cenit.shipstation.store_id', default=None
         )
-        return {'store_id': sync_msg or ''}
+        return {'store_id': store_id or ''}
+
 
     ############################################################################
     # Default Setters
@@ -64,16 +73,49 @@ class CenitWirelessSettings(models.TransientModel):
     def set_values(self):
         config_parameters = self.env['ir.config_parameter']
         for record in self.browse(self.ids):
-            config_parameters.set_param(
-                'odoo_cenit.wireless.email', record.email or ''
+            config_parameters.set_param (
+                'odoo_cenit.shipstation.key', record.key or ''
             )
 
         for record in self.browse(self.ids):
-            config_parameters.set_param(
-                'odoo_cenit.wireless.errmsg', record.enabled_err_msg or ''
+            config_parameters.set_param (
+                'odoo_cenit.shipstation.secret', record.secret or ''
             )
 
         for record in self.browse(self.ids):
-            config_parameters.set_param(
-                'odoo_cenit.wireless.syncmsg', record.enable_sync_msg or ''
+            config_parameters.set_param (
+                'odoo_cenit.shipstation.store_id', record.store_id or ''
             )
+
+
+    ############################################################################
+    # Actions
+    ############################################################################
+    def execute(self):
+        rc = super(CenitIntegrationSettings, self).execute()
+
+        if not self.env.context.get('install', False):
+            return rc
+
+        objs = self.browse(self.ids)
+        if not objs:
+            return rc
+        obj = objs[0]
+
+        installer = self.env['cenit.collection.installer']
+        data = installer.get_collection_data(
+            COLLECTION_NAME,
+            version = COLLECTION_VERSION
+        )
+
+        params = {}
+        for p in data.get('pull_parameters'):
+            k = p['label']
+            id_ = p.get('id')
+            value = getattr(obj,COLLECTION_PARAMS.get(k))
+            params.update ({id_: value})
+
+        installer.pull_shared_collection(data.get('id'), params=params)
+        installer.install_common_data(data['data'], os.path.dirname(__file__))
+
+        return rc
