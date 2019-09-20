@@ -5,7 +5,7 @@ class CenitWireless(http.Controller):
 
     @http.route(['/cenit_wireless/manage_order/'], auth='none', type='json', csrf=False)
     def manage_order(self, **kw):
-        print(http.request)
+        print(kw.keys())
         return {'success': True}
 
 
