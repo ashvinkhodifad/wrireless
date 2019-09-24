@@ -58,10 +58,17 @@ class CenitSaleOrder(models.Model):
                 [('name', 'ilike', '%s %s' % (order_temp['shipping_address'].get('first_name'), order_temp['shipping_address'].get('last_name')))], limit=1)
 
             if not order_partner:
+                try:
+                    temp_title = partner_title_manager.search([('name','=','Mr.')], limit=1) if order_temp['billing_address'].get('gender') == 0 else partner_title_manager.search([('name','=','Miss')],limit=1)
+                except Exception:
+                    temp_title = partner_title_manager.search([])
+                    if temp_title:
+                        temp_title = temp_title[0]
+
                 partner_insert_dict = {
                     'name': '%s %s'%(order_temp['billing_address'].get('first_name'),order_temp['billing_address'].get('last_name')),
                     'type': 'contact',
-                    'title': partner_title_manager.search([('name','=','Mr.')], limit=1) if order_temp['billing_address'].get('gender') == 0 else partner_title_manager.search([('name','=','Miss')],limit=1),
+                    'title': temp_title,
                     'street': order_temp['billing_address'].get('street', ''),
                     'city': order_temp['billing_address'].get('city', ''),
                     'country': country_manager.search([('code','=', order_temp['billing_address'].get('country'))], limit=1) if order_temp['billing_address'].get('country') else None,
