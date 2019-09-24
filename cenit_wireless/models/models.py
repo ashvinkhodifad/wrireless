@@ -59,19 +59,21 @@ class CenitSaleOrder(models.Model):
 
             if not order_partner:
                 try:
-                    temp_title = partner_title_manager.search([('name','=','Mr.')], limit=1) if order_temp['billing_address'].get('gender') == 0 else partner_title_manager.search([('name','=','Miss')],limit=1)
+                    temp_title = partner_title_manager.search([('name','=','Miss')], limit=1) if order_temp['billing_address'].get('gender') == 0 else partner_title_manager.search([('name','=','Mister')],limit=1)
                 except Exception:
                     temp_title = partner_title_manager.search([])
                     if temp_title:
                         temp_title = temp_title[0]
 
+                country = country_manager.search([('code','=', order_temp['billing_address'].get('country'))], limit=1)
+
                 partner_insert_dict = {
                     'name': '%s %s'%(order_temp['billing_address'].get('first_name'),order_temp['billing_address'].get('last_name')),
                     'type': 'contact',
-                    'title': temp_title,
+                    'title': temp_title.id,
                     'street': order_temp['billing_address'].get('street', ''),
                     'city': order_temp['billing_address'].get('city', ''),
-                    'country': country_manager.search([('code','=', order_temp['billing_address'].get('country'))], limit=1) if order_temp['billing_address'].get('country') else None,
+                    'country': country.id if country else None,
                     'zip': order_temp['billing_address'].get('postal_code', ''),
                     'phone': order_temp['billing_address'].get('phone', ''),
                     'email': order_temp['billing_address'].get('email', '')
@@ -111,7 +113,7 @@ class CenitSaleOrder(models.Model):
                     'price_unit': orderline.get('price'),
                     'state': 'draft',
                     'bm_state': orderline.get('state') or 1,
-                    'product_id': product if product else None,
+                    'product_id': product.id if product else None,
                     'product_uom': product.product_tmpl_id.uom_id if product else None,
                     'product_uom_qty': orderline.get('quantity') if product else None,
                     'customer_lead': 0, #Esto no c lo que es pero es NOT NULL
