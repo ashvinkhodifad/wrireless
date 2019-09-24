@@ -117,7 +117,7 @@ class CenitSaleOrder(models.Model):
                     'state': 'draft',
                     'bm_state': orderline.get('state') or 1,
                     'product_id': product.id if product else None,
-                    'product_uom': product.product_tmpl_id.uom_id if product else None,
+                    'product_uom': product.product_tmpl_id.uom_id.id if product else None,
                     'product_uom_qty': orderline.get('quantity') if product else None,
                     'customer_lead': 0, #Esto no c lo que es pero es NOT NULL
                     'create_date': parse(orderline.get('date_creation').split('T')[0]) if orderline.get('date_creation') else datetime.datetime.now(),
