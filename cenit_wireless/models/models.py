@@ -90,9 +90,9 @@ class CenitSaleOrder(models.Model):
                 'origin': 'Backmarket order %s' % (order_temp.get('bm_id')),
                 'state': 'draft',
                 'bm_state': 1,
-                'date_order': parse(order_temp.get('date_creation')) if order_temp.get('date_creation') else datetime.datetime.now(),
-                'validity_date': parse(order_temp.get('date_modification')) if order_temp.get('date_modification') else datetime.datetime.now(),
-                'create_date': parse(order_temp['date_creation']) if order_temp[
+                'date_order': parse(order_temp.get('date_creation')).date() if order_temp.get('date_creation') else datetime.datetime.now(),
+                'validity_date': parse(order_temp.get('date_modification')).date() if order_temp.get('date_modification') else datetime.datetime.now(),
+                'create_date': parse(order_temp['date_creation']).date() if order_temp[
                     'date_creation'] else datetime.datetime.now(),
                 'confirmation_date': datetime.datetime.now(),
                 'partner_id': order_partner.id,
@@ -120,7 +120,7 @@ class CenitSaleOrder(models.Model):
                     'product_uom': product.product_tmpl_id.uom_id if product else None,
                     'product_uom_qty': orderline.get('quantity') if product else None,
                     'customer_lead': 0, #Esto no c lo que es pero es NOT NULL
-                    'create_date': parse(orderline.get('date_creation')) if orderline.get('date_creation') else datetime.datetime.now(),
+                    'create_date': parse(orderline.get('date_creation')).date() if orderline.get('date_creation') else datetime.datetime.now(),
                     'currency_id': currency_manager.search([('name','=',orderline.get('currency'))], limit=1).id if orderline.get('currency') else currency_manager.search([('name','=','USD')], limit=1).id,
                     'display_type': '' if product else 'line_section'
                 }
