@@ -41,5 +41,6 @@
             parent="cenit_base.menu_cenit_integrations_settings_alt"
             sequence="1" action="action_cenit_wireless_settings"/>
 
+
     </data>
 </odoo>
