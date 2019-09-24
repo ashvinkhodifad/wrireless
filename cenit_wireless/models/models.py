@@ -65,7 +65,10 @@ class CenitSaleOrder(models.Model):
                     if temp_title:
                         temp_title = temp_title[0]
 
-                country = country_manager.search([('code','=', order_temp['billing_address'].get('country'))], limit=1)
+                try:
+                    country = country_manager.search([('code','=', order_temp['billing_address'].get('country'))], limit=1)
+                except Exception:
+                    country = country_manager.search([], limit=1)
 
                 partner_insert_dict = {
                     'name': '%s %s'%(order_temp['billing_address'].get('first_name'),order_temp['billing_address'].get('last_name')),
@@ -73,7 +76,7 @@ class CenitSaleOrder(models.Model):
                     'title': temp_title.id,
                     'street': order_temp['billing_address'].get('street', ''),
                     'city': order_temp['billing_address'].get('city', ''),
-                    'country': country.id if country else None,
+                    'country_id': country.id,
                     'zip': order_temp['billing_address'].get('postal_code', ''),
                     'phone': order_temp['billing_address'].get('phone', ''),
                     'email': order_temp['billing_address'].get('email', '')
