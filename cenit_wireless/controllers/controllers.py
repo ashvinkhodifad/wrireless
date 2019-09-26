@@ -4,8 +4,9 @@ from odoo import http
 class CenitWireless(http.Controller):
 
     @http.route(['/cenit_wireless/manage_order/'], auth='none', methods=['POST'], type='json', csrf=False)
-    def manage_order(self, **kw):
-        tmp1 = http.request.keys()
+    def manage_order(self, *arg, **kw):
+        tmp0 = arg
+        tmp1 = http.request
         tmp2 = kw.keys()
         return {'success': True}
 
