@@ -51,13 +51,9 @@ class CenitSaleOrder(models.Model):
             order_manager = self.env['sale.order']
             order_line_manager = self.env['sale.order.line']
 
-            order_partner = partner_manager.search(
-                [('name', 'ilike', '%s %s' % (order_temp['billing_address'].get('first_name'), order_temp['billing_address'].get('last_name')))], limit=1)
+            bm_partner = partner_manager.search([('name', '=', 'Backmarket')], limit=1)
 
-            partner_shipping = partner_manager.search(
-                [('name', 'ilike', '%s %s' % (order_temp['shipping_address'].get('first_name'), order_temp['shipping_address'].get('last_name')))], limit=1)
-
-            if not order_partner:
+            if not bm_partner:
                 try:
                     temp_title = partner_title_manager.search([('name','=','Miss')], limit=1) if order_temp['billing_address'].get('gender') == 0 else partner_title_manager.search([('name','=','Mister')],limit=1)
                 except Exception:
@@ -82,6 +78,9 @@ class CenitSaleOrder(models.Model):
 
                 order_partner = partner_manager.create(partner_insert_dict)
 
+            partner_shipping = partner_manager.search(
+                [('name', 'ilike', '%s %s' % (order_temp['shipping_address'].get('first_name'), order_temp['shipping_address'].get('last_name')))], limit=1)
+
             if not partner_shipping:
                 try:
                     temp_title = partner_title_manager.search([('name','=','Miss')], limit=1) if order_temp['shipping_address'].get('gender') == 0 else partner_title_manager.search([('name','=','Mister')],limit=1)
@@ -102,7 +101,8 @@ class CenitSaleOrder(models.Model):
                     'country_id': country.id,
                     'zip': order_temp['shipping_address'].get('postal_code', ''),
                     'phone': order_temp['shipping_address'].get('phone', ''),
-                    'email': order_temp['shipping_address'].get('email', '')
+                    'email': order_temp['shipping_address'].get('email', ''),
+                    'parent_id': bm_partner.id
                 }
 
                 partner_shipping = partner_manager.create(partner_insert_dict)
@@ -118,8 +118,8 @@ class CenitSaleOrder(models.Model):
                 'create_date': parse(order_temp['date_creation'].split('T')[0]) if order_temp[
                     'date_creation'] else datetime.datetime.now(),
                 'confirmation_date': datetime.datetime.now(),
-                'partner_id': order_partner.id,
-                'partner_invoice_id': order_partner.id,
+                'partner_id': partner_shipping.id,
+                'partner_invoice_id': bm_partner.id,
                 'partner_shipping_id': partner_shipping.id,
                 #'currency_id': currency_manager.search([('name','=',order_temp['currency'])], limit=1).id if order_temp['currency'] else currency_manager.search([('name','=','USD')], limit=1).id,
                 'pricelist_id': self.env['product.pricelist'].search([('name', '=', 'Public Pricelist'), ('active', '=', True)], limit=1).id,
