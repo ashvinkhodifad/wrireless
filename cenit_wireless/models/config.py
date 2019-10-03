@@ -77,3 +77,11 @@ class CenitWirelessSettings(models.TransientModel):
             config_parameters.set_param(
                 'odoo_cenit.wireless.syncmsg', record.enable_sync_msg or ''
             )
+
+
+
+class CenitWirelessCarrier(models.Model):
+    _name = "cenit.wireless.carrier"
+
+    shipstation_servicecode = fields.Char(string=_('Shipstation Carrier Code'))
+    odoo_carrier = fields.Many2one('delivery.carrier', string=_("Internal Delivery Carrier"))

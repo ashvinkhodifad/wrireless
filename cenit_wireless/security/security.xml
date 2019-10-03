@@ -1,0 +1,8 @@
+<odoo>
+    <data>
+        <record id="wireless_manager" model="res.groups">
+            <field name="name">Wireless / Manager</field>
+        </record>
+    </data>
+</odoo>
+
