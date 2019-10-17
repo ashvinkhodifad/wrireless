@@ -20,10 +20,11 @@ class CenitSaleOrder(models.Model):
 
     @api.model
     def check_backmarket_order_status(self, order_ids):
-        picking_manager = self.env['stock.picking']
+
         orders = self.env['sale.order'].search([('bm_id', 'in', order_ids)])
         result = []
         for order in orders:
+            stock_picking = self.env['stock.picking']
             tmp = {'bm_id': order.bm_id, 'bm_state': order.bm_state}
             ol_reults = []
             for orderline in order.order_line:
@@ -50,6 +51,10 @@ class CenitSaleOrder(models.Model):
             product_manager = self.env['product.product']
             order_manager = self.env['sale.order']
             order_line_manager = self.env['sale.order.line']
+
+            order = order_manager.search([('name', '=', 'BM%s' % order_temp.get('bm_id'))], limit=1)
+            if order:
+                return {'success': False, 'message': 'Order BM%s already exists' % order_temp.get('bm_id')}
 
             bm_partner = partner_manager.search([('name', '=', 'Backmarket')], limit=1)
 
@@ -107,7 +112,7 @@ class CenitSaleOrder(models.Model):
 
                 partner_shipping = partner_manager.create(partner_insert_dict)
 
-            #creand order
+            #Creating the order
             order_insert_dict = {
                 'name': 'BM%s' % (order_temp.get('bm_id')),
                 'origin': 'Backmarket order %s' % (order_temp.get('bm_id')),
@@ -142,7 +147,7 @@ class CenitSaleOrder(models.Model):
                     'product_id': product.id if product else None,
                     'product_uom': product.product_tmpl_id.uom_id.id if product else None,
                     'product_uom_qty': orderline.get('quantity') if product else None,
-                    'customer_lead': 0, #Esto no c lo que es pero es NOT NULL
+                    'customer_lead': 0, #
                     'create_date': parse(orderline.get('date_creation').split('T')[0]) if orderline.get('date_creation') else datetime.datetime.now(),
                     'currency_id': currency_manager.search([('name','=',orderline.get('currency'))], limit=1).id if orderline.get('currency') else currency_manager.search([('name','=','USD')], limit=1).id,
                     'display_type': '' if product else 'line_section'
