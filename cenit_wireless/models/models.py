@@ -1,4 +1,7 @@
 # -*- coding: utf-8 -*-
+import json
+
+import requests
 from odoo import models, fields, api, _
 
 import logging
@@ -172,11 +175,13 @@ class CenitProductProduct(models.Model):
 
     @api.model
     def update_quantity(self):
-        result = []
 
         for product in self.env['product.product'].search([]):
-            tmp = {"listing_id": product.default_code, "quantity": product.qty_available}
-            result.append(tmp)
-        return result
+            data = {"listing_id": product.default_code, "quantity": product.qty_available}
+            TOKEN = ''
+            url = 'https://www.backmarket.fr/ws/listings/%s' % product.default_code
+            requests.post(url, data=json.dumps(data), auth=(TOKEN))
+
+        return {'success': True, 'message': 'Products updated successfully'}
 
 
