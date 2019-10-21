@@ -5,7 +5,7 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
-ORDER_STATES = {1:2, 2:3, 3:6}
+ORDERLINE_STATES = {1:2, 2:3, 3:6}
 
 class CenitSaleOrderLine(models.Model):
     _inherit = "sale.order.line"
@@ -35,7 +35,7 @@ class CenitSaleOrder(models.Model):
             tmp = {'order_id': order.bm_id}
             ol_results = []
             for orderline in order.order_line:
-                tmp2 = {'orderline_id': orderline.bm_id, 'new_state': ORDER_STATES.get(orderline.bm_state, 3),
+                tmp2 = {'orderline_id': orderline.bm_id, 'new_state': ORDERLINE_STATES.get(orderline.bm_state, 3),
                         'sku': orderline.product_id.default_code, 'tracking_number': stock_picking.carrier_tracking_ref,
                         'shipper': stock_picking.carrier_id.name}
                 ol_results.append(tmp2)
