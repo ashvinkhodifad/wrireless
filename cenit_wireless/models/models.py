@@ -5,6 +5,8 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
+ORDER_STATES = {1:2, 2:3, 3:6}
+
 class CenitSaleOrderLine(models.Model):
     _inherit = "sale.order.line"
 
@@ -22,16 +24,22 @@ class CenitSaleOrder(models.Model):
     def check_backmarket_order_status(self, order_ids):
 
         orders = self.env['sale.order'].search([('bm_id', 'in', order_ids)])
+
         result = []
         for order in orders:
-            stock_picking = self.env['stock.picking']
-            tmp = {'bm_id': order.bm_id, 'bm_state': order.bm_state}
-            ol_reults = []
+            stock_picking = self.env['stock.picking'].search([('origin', '=', order.bm_id)], limit=1)
+            # Aqui la duda seria si el campo origin del stock.picking tiene el id o el bm_id de la order
+            if not stock_picking:
+                break
+
+            tmp = {'order_id': order.bm_id}
+            ol_results = []
             for orderline in order.order_line:
-                tmp2 = {'bm_id': orderline.bm_id, 'new_state': orderline.bm_state,
-                        'sku': orderline.product_id.default_code, 'tracking_number': ''}
-                ol_reults.append(tmp2)
-            tmp['orderlines'] = ol_reults
+                tmp2 = {'orderline_id': orderline.bm_id, 'new_state': ORDER_STATES.get(orderline.bm_state, 3),
+                        'sku': orderline.product_id.default_code, 'tracking_number': stock_picking.carrier_tracking_ref,
+                        'shipper': stock_picking.carrier_id.name}
+                ol_results.append(tmp2)
+            tmp['orderlines'] = ol_results
             result.append(tmp)
 
         return result
@@ -158,3 +166,18 @@ class CenitSaleOrder(models.Model):
 
         else:
             return {'success': False, 'message': 'Empty order'}
+
+
+class CenitProductProduct(models.Model):
+    _inherit = "product.product"
+
+    @api.model
+    def update_quantity(self):
+        result = []
+
+        for product in self.env['product.product'].search([]):
+            tmp = {"listing_id": product.default_code, "quantity": product.qty_available}
+            result.append(tmp)
+        return result
+
+
