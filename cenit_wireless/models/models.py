@@ -5,7 +5,6 @@ import logging
 
 _logger = logging.getLogger(__name__)
 
-ORDERLINE_STATES = {1:2, 2:3, 3:6}
 
 class CenitSaleOrderLine(models.Model):
     _inherit = "sale.order.line"
@@ -35,7 +34,7 @@ class CenitSaleOrder(models.Model):
             tmp = {'order_id': order.bm_id}
             ol_results = []
             for orderline in order.order_line:
-                tmp2 = {'orderline_id': orderline.bm_id, 'new_state': ORDERLINE_STATES.get(orderline.bm_state, 3),
+                tmp2 = {'orderline_id': orderline.bm_id, 'new_state': orderline.bm_state,
                         'sku': orderline.product_id.default_code, 'tracking_number': stock_picking.carrier_tracking_ref,
                         'shipper': stock_picking.carrier_id.name}
                 ol_results.append(tmp2)
@@ -151,7 +150,7 @@ class CenitSaleOrder(models.Model):
                     'name': product.product_tmpl_id.name if product else 'BackMarket orderline %s' % (orderline.get('id')),
                     'price_unit': orderline.get('price'),
                     'state': 'draft',
-                    'bm_state': orderline.get('state') or 1,
+                    'bm_state': 2,
                     'product_id': product.id if product else None,
                     'product_uom': product.product_tmpl_id.uom_id.id if product else None,
                     'product_uom_qty': orderline.get('quantity') if product else None,
