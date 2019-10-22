@@ -29,7 +29,7 @@ class CenitSaleOrder(models.Model):
 
         result = []
         for order in orders:
-            stock_picking = self.env['stock.picking'].search([('origin', '=', order.id)], limit=1)
+            stock_picking = self.env['stock.picking'].search([('origin', '=', order.name)], limit=1)
 
             if not stock_picking:
                 break
