@@ -29,8 +29,8 @@ class CenitSaleOrder(models.Model):
 
         result = []
         for order in orders:
-            stock_picking = self.env['stock.picking'].search([('origin', '=', order.bm_id)], limit=1)
-            # Aqui la duda seria si el campo origin del stock.picking tiene el id o el bm_id de la order
+            stock_picking = self.env['stock.picking'].search([('origin', '=', order.name)], limit=1)
+
             if not stock_picking:
                 break
 
