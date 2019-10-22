@@ -1,14 +1,18 @@
 # -*- coding: utf-8 -*-
-import base64
 
 import requests
 from odoo import http
 import json
 
+import logging
+_logger = logging.getLogger(__name__)
+
 class CenitWireless(http.Controller):
 
     @http.route(['/cenit_wireless/manage_order/'], auth='none', methods=['POST'], type='json', csrf=False)
     def manage_order(self):
+
+        _logger.info('The webhook is called successfuly')
 
         data = json.loads(http.request.httprequest.data)
         API_KEY = http.request.env['ir.config_parameter'].sudo().get_param('odoo_cenit.shipstation.key')
@@ -22,9 +26,15 @@ class CenitWireless(http.Controller):
         sC = ss_data.get('shipments', [{}])[0].get('serviceCode', '')
         tN = ss_data.get('shipments', [{}])[0].get('trackingNumber', '')
 
+        _logger.info('The orderNumber is %s' % oN)
+        _logger.info('The serviceCode is %s' % sC)
+        _logger.info('The trackingNumber is %s' % tN)
+
         stock_picking = http.request.env['stock.picking'].search([('origin', '=', oN)], limit=1)
 
         if stock_picking :
+            _logger.info('The stock_picking was found')
+
             carrier = http.request.env['cenit.wireless.carrier'].search([('shipstation_servicecode', '=', sC)], limit=1)
 
             if not carrier:
@@ -41,6 +51,7 @@ class CenitWireless(http.Controller):
 
         else:
             #We should send a message telling the owner the stock.picking doesn't exists
+            _logger.info('The stock_picking was not found')
             return {'success': False, 'message': "Stock Picking doesn't exists"}
 
         return {'success': True, 'message': 'Stock Picking updated'}
