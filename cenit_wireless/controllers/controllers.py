@@ -34,8 +34,11 @@ class CenitWireless(http.Controller):
 
             order = http.request.env['sale.order'].search(['name', '=', oN], limit=1)
 
-            for orderline in order.order_line:
-                orderline.bm_state = 3
+            # for orderline in order.order_line:
+            #     orderline.bm_state = 3
+
+            order.order_line.write({'bm_state': 3})
+
         else:
             #We should send a message telling the owner the stock.picking doesn't exists
             return {'success': False, 'message': "Stock Picking doesn't exists"}

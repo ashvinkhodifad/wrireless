@@ -1,9 +1,13 @@
 # -*- coding: utf-8 -*-
+import json
+
+import requests
 from odoo import models, fields, api, _
 
 import logging
 
 _logger = logging.getLogger(__name__)
+
 
 class CenitSaleOrderLine(models.Model):
     _inherit = "sale.order.line"
@@ -22,16 +26,22 @@ class CenitSaleOrder(models.Model):
     def check_backmarket_order_status(self, order_ids):
 
         orders = self.env['sale.order'].search([('bm_id', 'in', order_ids)])
+
         result = []
         for order in orders:
-            stock_picking = self.env['stock.picking']
-            tmp = {'bm_id': order.bm_id, 'bm_state': order.bm_state}
-            ol_reults = []
+            stock_picking = self.env['stock.picking'].search([('origin', '=', order.bm_id)], limit=1)
+            # Aqui la duda seria si el campo origin del stock.picking tiene el id o el bm_id de la order
+            if not stock_picking:
+                break
+
+            tmp = {'order_id': order.bm_id}
+            ol_results = []
             for orderline in order.order_line:
-                tmp2 = {'bm_id': orderline.bm_id, 'new_state': orderline.bm_state,
-                        'sku': orderline.product_id.default_code, 'tracking_number': ''}
-                ol_reults.append(tmp2)
-            tmp['orderlines'] = ol_reults
+                tmp2 = {'orderline_id': orderline.bm_id, 'new_state': orderline.bm_state,
+                        'sku': orderline.product_id.default_code, 'tracking_number': stock_picking.carrier_tracking_ref,
+                        'shipper': stock_picking.carrier_id.name}
+                ol_results.append(tmp2)
+            tmp['orderlines'] = ol_results
             result.append(tmp)
 
         return result
@@ -143,7 +153,7 @@ class CenitSaleOrder(models.Model):
                     'name': product.product_tmpl_id.name if product else 'BackMarket orderline %s' % (orderline.get('id')),
                     'price_unit': orderline.get('price'),
                     'state': 'draft',
-                    'bm_state': orderline.get('state') or 1,
+                    'bm_state': 2,
                     'product_id': product.id if product else None,
                     'product_uom': product.product_tmpl_id.uom_id.id if product else None,
                     'product_uom_qty': orderline.get('quantity') if product else None,
@@ -158,3 +168,20 @@ class CenitSaleOrder(models.Model):
 
         else:
             return {'success': False, 'message': 'Empty order'}
+
+
+class CenitProductProduct(models.Model):
+    _inherit = "product.product"
+
+    @api.model
+    def update_quantity(self):
+
+        for product in self.env['product.product'].search([]):
+            data = {"listing_id": product.default_code, "quantity": product.qty_available}
+            TOKEN = ''
+            url = 'https://www.backmarket.fr/ws/listings/%s' % product.default_code
+            requests.post(url, data=json.dumps(data), auth=(TOKEN))
+
+        return {'success': True, 'message': 'Products updated successfully'}
+
+
