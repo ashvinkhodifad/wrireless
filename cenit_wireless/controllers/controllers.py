@@ -30,24 +30,24 @@ class CenitWireless(http.Controller):
         _logger.info('The serviceCode is %s' % sC)
         _logger.info('The trackingNumber is %s' % tN)
 
-        stock_picking = http.request.env['stock.picking'].search([('origin', '=', oN)], limit=1)
+        stock_picking = http.request.env['stock.picking'].sudo().search([('origin', '=', oN)], limit=1)
 
         if stock_picking :
             _logger.info('The stock_picking was found')
 
-            carrier = http.request.env['cenit.wireless.carrier'].search([('shipstation_servicecode', '=', sC)], limit=1)
+            carrier = http.request.env['cenit.wireless.carrier'].sudo().search([('shipstation_servicecode', '=', sC)], limit=1)
 
             if not carrier:
-                carrier = http.request.env['cenit.wireless.carrier'].search([], limit=1)
+                carrier = http.request.env['cenit.wireless.carrier'].sudo().search([], limit=1)
 
             stock_picking.write({'carrier_tracking_ref': tN, 'carrier_id': carrier.odoo_carrier.id})
 
-            order = http.request.env['sale.order'].search(['name', '=', oN], limit=1)
+            order = http.request.env['sale.order'].sudo().search(['name', '=', oN], limit=1)
 
-            # for orderline in order.order_line:
-            #     orderline.bm_state = 3
+            for orderline in order.order_line:
+                orderline.sudo().write({'bm_state': 3})
 
-            order.order_line.write({'bm_state': 3})
+            # order.order_line.sudo().write({'bm_state': 3})
 
         else:
             #We should send a message telling the owner the stock.picking doesn't exists
