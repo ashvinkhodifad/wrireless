@@ -40,7 +40,7 @@ class CenitWireless(http.Controller):
             if not carrier:
                 carrier = http.request.env['cenit.wireless.carrier'].sudo().search([], limit=1)
 
-            stock_picking.write({'carrier_tracking_ref': tN, 'carrier_id': carrier.odoo_carrier.id})
+            stock_picking.sudo().write({'carrier_tracking_ref': tN, 'carrier_id': carrier.odoo_carrier.id})
 
             order = http.request.env['sale.order'].sudo().search(['name', '=', oN], limit=1)
 
@@ -59,4 +59,5 @@ class CenitWireless(http.Controller):
 
     @http.route('/cenit_wireless/manage_orderline/', auth='public')
     def manage_orderline(self):
+
         return "Hello, world"
