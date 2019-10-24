@@ -142,11 +142,15 @@ class CenitSaleOrder(models.Model):
             }
 
             new_order = order_manager.create(order_insert_dict)
+            skus = []
             for orderline in order_temp.get('orderlines') :
-                product = product_manager.search([('default_code', '=', orderline['listing'])], limit=1)
+                product = product_manager.search([('default_code', '=', orderline.get('listing'))], limit=1)
                 if not product:
                     # Send an email with order.bm_id and orderline.bm_id equal to order_temp['bm_id']
                     pass
+
+                skus.append(orderline.get('listing'))
+
                 ol_dict = {
                     'bm_id': orderline.get('id'),
                     'order_id': new_order.id,
@@ -164,7 +168,7 @@ class CenitSaleOrder(models.Model):
                 }
                 order_line_manager.create(ol_dict)
 
-            return {'success': True, 'message': 'Order created successfully', 'order_name': new_order.name}
+            return {'success': True, 'message': 'Order created successfully', 'order': {'order_id': new_order.name, 'skus': skus}}
 
         else:
             return {'success': False, 'message': 'Empty order'}
