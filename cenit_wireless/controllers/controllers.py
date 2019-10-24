@@ -34,11 +34,12 @@ class CenitWireless(http.Controller):
         _logger.info('Stock Picking %s' % stock_picking.name)
 
         if stock_picking :
-            _logger.info('The stock_picking was found')
+            _logger.info('The stock_picking was found !!!')
 
             carrier = http.request.env['cenit.wireless.carrier'].sudo().search([('shipstation_servicecode', '=', sC)], limit=1)
 
             if not carrier:
+                _logger.info("The carrier was not found in the db")
                 carrier = http.request.env['cenit.wireless.carrier'].sudo().search([], limit=1)
 
             _logger.info('Carrier %s' % carrier.shipstation_servicecode)
