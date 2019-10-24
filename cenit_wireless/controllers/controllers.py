@@ -31,6 +31,7 @@ class CenitWireless(http.Controller):
         _logger.info('The trackingNumber is %s' % tN)
 
         stock_picking = http.request.env['stock.picking'].sudo().search([('origin', '=', 'BM197123')], limit=1)
+        _logger.info('Stock Picking %s' % stock_picking.name)
 
         if stock_picking :
             _logger.info('The stock_picking was found')
@@ -40,11 +41,14 @@ class CenitWireless(http.Controller):
             if not carrier:
                 carrier = http.request.env['cenit.wireless.carrier'].sudo().search([], limit=1)
 
+            _logger.info('Carrier %s' % carrier.shipstation_servicecode)
+
             stock_picking.sudo().write({'carrier_tracking_ref': tN, 'carrier_id': carrier.odoo_carrier.id})
 
             order = http.request.env['sale.order'].sudo().search([('name', '=', oN)], limit=1)
 
             for orderline in order.order_line:
+                _logger.info('Updating orderline %s' % orderline.name)
                 orderline.sudo().write({'bm_state': 3})
 
             # order.order_line.sudo().write({'bm_state': 3})
