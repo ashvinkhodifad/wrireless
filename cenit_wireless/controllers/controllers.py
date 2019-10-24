@@ -30,7 +30,7 @@ class CenitWireless(http.Controller):
         _logger.info('The serviceCode is %s' % sC)
         _logger.info('The trackingNumber is %s' % tN)
 
-        stock_picking = http.request.env['stock.picking'].sudo().search([('origin', '=', oN)], limit=1)
+        stock_picking = http.request.env['stock.picking'].sudo().search([('origin', '=', 'BM197123')], limit=1)
 
         if stock_picking :
             _logger.info('The stock_picking was found')
