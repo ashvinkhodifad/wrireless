@@ -26,24 +26,15 @@ class CenitWireless(http.Controller):
         sC = ss_data.get('shipments', [{}])[0].get('serviceCode', '')
         tN = ss_data.get('shipments', [{}])[0].get('trackingNumber', '')
 
-        _logger.info('The orderNumber is %s' % oN)
-        _logger.info('The serviceCode is %s' % sC)
-        _logger.info('The trackingNumber is %s' % tN)
-
         stock_picking = http.request.env['stock.picking'].sudo().search([('origin', '=', oN)], limit=1)
-
-        if not stock_picking:
-            stock_picking = http.request.env['stock.picking'].sudo().search([('origin', '=', 'BM197123')], limit=1)
 
         _logger.info('Stock Picking %s' % stock_picking.name)
 
         if stock_picking :
-            _logger.info('The stock_picking was found !!!')
 
             carrier = http.request.env['cenit.wireless.carrier'].sudo().search([('shipstation_servicecode', '=', sC)], limit=1)
 
             if not carrier:
-                _logger.info("The carrier was NOT found in the db")
                 carrier = http.request.env['cenit.wireless.carrier'].sudo().search([], limit=1)
 
             _logger.info('Carrier %s' % carrier.shipstation_servicecode)
@@ -53,13 +44,9 @@ class CenitWireless(http.Controller):
             order = http.request.env['sale.order'].sudo().search([('name', '=', oN)], limit=1)
 
             for orderline in order.order_line:
-                _logger.info('Updating orderline %s' % orderline.name)
                 orderline.sudo().write({'bm_state': 3})
-
             # order.order_line.sudo().write({'bm_state': 3})
-
         else:
-            #We should send a message telling the owner the stock.picking doesn't exists
             _logger.info('The stock_picking was NOT found')
             return {'success': False, 'message': "Stock Picking doesn't exists"}
 
@@ -68,5 +55,4 @@ class CenitWireless(http.Controller):
 
     @http.route('/cenit_wireless/manage_orderline/', auth='public')
     def manage_orderline(self):
-
-        return "Hello, world"
+        pass
