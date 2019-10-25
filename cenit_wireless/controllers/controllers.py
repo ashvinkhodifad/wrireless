@@ -30,15 +30,20 @@ class CenitWireless(http.Controller):
         _logger.info('The serviceCode is %s' % sC)
         _logger.info('The trackingNumber is %s' % tN)
 
-        stock_picking = http.request.env['stock.picking'].sudo().search([('origin', '=', 'BM197123')], limit=1)
+        stock_picking = http.request.env['stock.picking'].sudo().search([('origin', '=', oN)], limit=1)
+
+        if not stock_picking:
+            stock_picking = http.request.env['stock.picking'].sudo().search([('origin', '=', 'BM197123')], limit=1)
+
         _logger.info('Stock Picking %s' % stock_picking.name)
 
         if stock_picking :
-            _logger.info('The stock_picking was found')
+            _logger.info('The stock_picking was found !!!')
 
             carrier = http.request.env['cenit.wireless.carrier'].sudo().search([('shipstation_servicecode', '=', sC)], limit=1)
 
             if not carrier:
+                _logger.info("The carrier was NOT found in the db")
                 carrier = http.request.env['cenit.wireless.carrier'].sudo().search([], limit=1)
 
             _logger.info('Carrier %s' % carrier.shipstation_servicecode)
@@ -55,7 +60,7 @@ class CenitWireless(http.Controller):
 
         else:
             #We should send a message telling the owner the stock.picking doesn't exists
-            _logger.info('The stock_picking was not found')
+            _logger.info('The stock_picking was NOT found')
             return {'success': False, 'message': "Stock Picking doesn't exists"}
 
         return {'success': True, 'message': 'Stock Picking updated'}
