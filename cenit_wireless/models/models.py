@@ -180,12 +180,13 @@ class CenitProductProduct(models.Model):
     @api.model
     def update_quantity(self):
 
-        for product in self.env['product.product'].search([]):
-            data = {"listing_id": product.default_code, "quantity": product.qty_available}
-            TOKEN = ''
-            url = 'https://www.backmarket.fr/ws/listings/%s' % product.default_code
-            requests.post(url, data=json.dumps(data), auth=(TOKEN))
-
-        return {'success': True, 'message': 'Products updated successfully'}
+        products = []
+        try:
+            for product in self.env['product.product'].search([]):
+                data = {"listing_id": product.default_code, "quantity": product.qty_available}
+                products.append(data)
+            return {'success': True, 'message': 'Products updated successfully', 'products': products}
+        except Exception as exc:
+            return {'success': False, 'message': exc}
 
 
