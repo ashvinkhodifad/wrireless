@@ -168,6 +168,8 @@ class CenitSaleOrder(models.Model):
                 }
                 order_line_manager.create(ol_dict)
 
+            #confirm the order and this method also generate the stock picking
+            new_order.action_confirm()
             return {'success': True, 'message': 'Order created successfully', 'order': {'order_id': new_order.name, 'skus': skus}}
 
         else:
