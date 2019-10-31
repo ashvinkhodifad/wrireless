@@ -180,14 +180,12 @@ class CenitProductProduct(models.Model):
     _inherit = "product.product"
 
     @api.model
-    def update_quantity(self):
+    def update_quantity(self, ids):
 
-        products = []
         try:
-            for product in self.env['product.product'].search([]):
-                data = {"listing_id": product.default_code, "quantity": product.qty_available}
-                products.append(data)
-            return {'success': True, 'message': 'Products updated successfully', 'products': products}
+            listing = ids[0]
+            product = self.env['product.template'].search([('default_code', '=', listing)])
+            return {"listing_id": product.default_code, "quantity": product.qty_available}
         except Exception as exc:
             return {'success': False, 'message': exc}
 
