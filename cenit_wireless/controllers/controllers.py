@@ -41,6 +41,8 @@ class CenitWireless(http.Controller):
 
             stock_picking.sudo().write({'carrier_tracking_ref': tN, 'carrier_id': carrier.odoo_carrier.id})
 
+            action = stock_picking.sudo().button_validate()
+
             order = http.request.env['sale.order'].sudo().search([('name', '=', oN)], limit=1)
 
             for orderline in order.order_line:
