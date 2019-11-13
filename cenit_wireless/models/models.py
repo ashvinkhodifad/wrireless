@@ -175,6 +175,17 @@ class CenitSaleOrder(models.Model):
         else:
             return {'success': False, 'message': 'Empty order'}
 
+    @api.model
+    def cancel_backmarket_order(self, order_id):
+
+        try:
+            order = self.env['sale.order'].search([('bm_id', '=', order_id)], limit=1)
+            order.action_cancel()
+            return {'success': True, 'message': "The order with BM id %s was cancelled successfully" % order_id}
+        except Exception as error:
+            return {'success': False, 'message': error}
+
+
 
 class CenitProductProduct(models.Model):
     _inherit = "product.product"
