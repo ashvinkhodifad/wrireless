@@ -170,10 +170,10 @@ class CenitSaleOrder(models.Model):
 
             #confirm the order and this method also generate the stock picking
             new_order.action_confirm()
-            return {'success': True, 'message': 'Order created successfully', 'order': {'order_id': new_order.name, 'skus': skus}}
+            return {'success': True, 'message': 'Order created successfully', 'order': {'order_id': new_order.name, 'skus': skus}, 'operation_type': 'create_order'}
 
         else:
-            return {'success': False, 'message': 'Empty order'}
+            return {'success': False, 'message': 'Empty order', 'operation_type': 'create_order'}
 
     @api.model
     def cancel_backmarket_order(self, order_id):
@@ -181,9 +181,9 @@ class CenitSaleOrder(models.Model):
         try:
             order = self.env['sale.order'].search([('bm_id', '=', order_id)], limit=1)
             order.action_cancel()
-            return {'success': True, 'message': "The order with BM id %s was cancelled successfully" % order_id}
+            return {'success': True, 'message': "The order with BM id %s was cancelled successfully" % order_id, 'operation_type': 'cancel_order'}
         except Exception as error:
-            return {'success': False, 'message': error}
+            return {'success': False, 'message': error, 'operation_type': 'cancel_order'}
 
 
 
