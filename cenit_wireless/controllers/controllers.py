@@ -41,7 +41,25 @@ class CenitWireless(http.Controller):
 
             stock_picking.sudo().write({'carrier_tracking_ref': tN, 'carrier_id': carrier.odoo_carrier.id})
 
-            action = stock_picking.sudo().button_validate()
+            #action = stock_picking.sudo().button_validate()
+
+            #Validating the stock picking this is the code that appear in process method of stock.immediate.transfer
+            process_ptr = True
+
+            try:
+                if stock_picking.state == 'draft':
+                    stock_picking.sudo().action_confirm()
+                    if stock_picking.state != 'assigned':
+                        stock_picking.sudo().action_assign()
+                        if stock_picking.state != 'assigned':
+                            process_ptr = False
+                if process_ptr:
+                    for move in stock_picking.move_lines.sudo().filtered(lambda m: m.state not in ['done', 'cancel']):
+                        for move_line in move.move_line_ids:
+                            move_line.qty_done = move_line.product_uom_qty
+                    stock_picking.sudo().action_done()
+            except Exception:
+                pass
 
             order = http.request.env['sale.order'].sudo().search([('name', '=', oN)], limit=1)
 
