@@ -187,7 +187,6 @@ class CenitSaleOrder(models.Model):
             return {'success': False, 'message': error, 'operation_type': 'cancel_order'}
 
 
-
 class CenitProductProduct(models.Model):
     _inherit = "product.product"
 
@@ -196,8 +195,8 @@ class CenitProductProduct(models.Model):
 
         try:
             listing = ids[0]
-            product = self.env['product.template'].search([('default_code', '=', listing)])
-            return {"listing_id": product.default_code, "quantity": product.qty_available}
+            product = self.env['product.product'].search([('default_code', '=', listing)], limit=1)
+            return {"listing_id": product.default_code, "quantity": product.product_tmpl_id.qty_available}
         except Exception as exc:
             return {'success': False, 'message': exc}
 
