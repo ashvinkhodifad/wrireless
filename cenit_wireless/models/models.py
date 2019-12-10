@@ -3,12 +3,16 @@ import json
 
 import requests
 from odoo import models, fields, api, _
+from odoo.exceptions import ValidationError
 
 import logging
 
 _logger = logging.getLogger(__name__)
 
-_SHIPSTATION_CANCEL_URL = "https://ssapi.shipstation.com/orders/%s"
+_SHIPSTATION_LIST_ORDER = "https://ssapi.shipstation.com/orders?orderNumber=%s"
+
+_SHIPSTATION_CANCEL_ORDER = "https://ssapi.shipstation.com/orders/%s"
+
 
 class CenitSaleOrderLine(models.Model):
     _inherit = "sale.order.line"
@@ -201,7 +205,6 @@ class CenitProductProduct(models.Model):
             return {'success': False, 'message': exc}
 
 
-
 class CenitStockPicking(models.Model):
     _inherit = "stock.picking"
 
@@ -209,16 +212,25 @@ class CenitStockPicking(models.Model):
     def action_cancel(self):
         result = super(CenitStockPicking, self).action_cancel()
         if result :
-            try:
-                order = self.env['sale.order'].search([('name', '=', self.origin)], limit=1)
 
-                API_KEY = self.env['ir.config_parameter'].get_param('odoo_cenit.shipstation.key')
-                API_SECRET = self.env['ir.config_parameter'].get_param('odoo_cenit.shipstation.secret')
-                response = requests.delete(_SHIPSTATION_CANCEL_URL % order.name, auth=(API_KEY, API_SECRET))
-                data = json.loads(response.content)
-                _logger.info("Order {name} Cancelled. Success: {code}, Message: {message}".format(name=order.name, code=data.get('success'), message=data.get('message')))
-            except Exception:
-                _logger.info("ERROR: The order %s couldn't be cancelled" % order.name)
+            # API_KEY = self.env['ir.config_parameter'].get_param('odoo_cenit.shipstation.key')
+            # API_SECRET = self.env['ir.config_parameter'].get_param('odoo_cenit.shipstation.secret')
+
+            API_KEY = '01c7b0b2a5294d4697ed1e587f83fb73'
+            API_SECRET = '747da7fefb1c4c54bdfaf7015a5f07e1'
+            response = requests.get(_SHIPSTATION_LIST_ORDER % self.origin, auth=(API_KEY, API_SECRET))
+            data = json.loads(response.content)
+
+            for order in data.get('orders'):
+                response = requests.delete(_SHIPSTATION_CANCEL_ORDER % order.get('orderId'), auth=(API_KEY, API_SECRET))
+                if not response.status_code == 200:
+                    _logger.info("Order {name} Cancelled. Success: {code}, Message: {message}".format(name=self.origin,
+                                                                                                      code=data.get(
+                                                                                                          'success'),
+                                                                                                      message=data.get(
+                                                                                                          'message')))
+                    raise ValidationError(_("Error cancelling order %s in Shipstation" % self.origin))
+
         return True
 
 
