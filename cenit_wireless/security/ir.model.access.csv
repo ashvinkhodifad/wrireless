@@ -1,2 +1,3 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_wireless_carrier_config,cenit.wireless.carrier,model_cenit_wireless_carrier,wireless_manager,1,1,1,1
+access_wireless_carrier_product_config,cenit.wireless.carrier.product,model_cenit_wireless_carrier_product,wireless_manager,1,1,1,1
