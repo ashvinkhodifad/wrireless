@@ -1,5 +1,6 @@
 <odoo>
     <data>
+        <!-- Shipstation Carrier Match Config-->
         <record model="ir.ui.view" id="wireless_carrier_config_tree">
             <field name="name">wireless_carrier_config_tree</field>
             <field name="model">cenit.wireless.carrier</field>
@@ -47,12 +48,66 @@
             <field name="view_mode">tree,form</field>
         </record>
 
+        <!-- Shipstation Carrier Match Config-->
+
+        <!-- Odoo Carrier - Product Match Config-->
+
+        <record model="ir.ui.view" id="wireless_carrier_product_config_tree">
+            <field name="name">wireless_carrier_product_config_tree</field>
+            <field name="model">cenit.wireless.carrier.product</field>
+            <field name="arch" type="xml">
+                <tree>
+                    <field name="odoo_carrier"/>
+                    <field name="product"/>
+                </tree>
+            </field>
+        </record>
+
+        <record model="ir.ui.view" id="wireless_carrier_product_config_form">
+            <field name="name">wireless_carrier_product_config_form</field>
+            <field name="model">cenit.wireless.carrier.product</field>
+            <field name="arch" type="xml">
+                <form string="Carrier">
+                    <sheet>
+                        <group>
+                            <field name="odoo_carrier"/>
+                            <field name="product"/>
+                        </group>
+                    </sheet>
+                </form>
+            </field>
+        </record>
+
+
+        <record model="ir.ui.view" id="wireless_carrier_product_config_search">
+            <field name="name">wireless_carrier_product_config_search</field>
+            <field name="model">cenit.wireless.carrier.product</field>
+            <field name="arch" type="xml">
+                <search>
+                    <field name="odoo_carrier"/>
+                    <field name="product"/>
+                </search>
+            </field>
+        </record>
+
+
+        <record model="ir.actions.act_window" id="wireless_carrier_product_config_list_action">
+            <field name="name">Wireless Carrier Shipstation Integration</field>
+            <field name="res_model">cenit.wireless.carrier.product</field>
+            <field name="view_type">form</field>
+            <field name="view_mode">tree,form</field>
+        </record>
+
+        <!-- Odoo Carrier - Product Match Config-->
 
         <menuitem name="Wireless" id="wireless_menu_root" groups="wireless_manager"/>
         <menuitem name="Configuration" id="wireless_config" parent="wireless_menu_root" groups="wireless_manager"/>
         <menuitem id="wireless_carrier_config_menu" name="Wireless Carrier Shipstation Integration"
                   parent="wireless_config"
                   action="wireless_carrier_config_list_action" sequence="1" groups="wireless_manager"/>
+         <menuitem id="wireless_carrier_product_config_menu" name="Odoo Carrier-Product Match Config"
+                  parent="wireless_config"
+                  action="wireless_carrier_product_config_list_action" sequence="1" groups="wireless_manager"/>
 
     </data>
 </odoo>

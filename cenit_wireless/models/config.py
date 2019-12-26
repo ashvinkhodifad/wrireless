@@ -83,5 +83,17 @@ class CenitWirelessSettings(models.TransientModel):
 class CenitWirelessCarrier(models.Model):
     _name = "cenit.wireless.carrier"
 
+    _rec_name = 'shipstation_servicecode'
+
     shipstation_servicecode = fields.Char(string=_('Shipstation Carrier Code'))
     odoo_carrier = fields.Many2one('delivery.carrier', string=_("Internal Delivery Carrier"))
+
+
+class CenitWirelessCarrierProduct(models.Model):
+    _name = "cenit.wireless.carrier.product"
+
+    _rec_name = 'odoo_carrier'
+
+    odoo_carrier = fields.Many2one('delivery.carrier', string=_("Odoo Shipping Method"))
+    product = fields.Many2one('product.product', string=_("Shipping Service as Product"))
+
