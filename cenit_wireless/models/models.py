@@ -27,6 +27,40 @@ class CenitSaleOrder(models.Model):
     bm_id = fields.Char(string=_('Backmarket id'))
     bm_state = fields.Integer(string=_('Backmarket Order State'))
 
+    @api.multi
+    def action_confirm(self):
+        try:
+            config_carrier_product_manager = self.env['cenit.wireless.carrier.product']
+            order_line_manager = self.env['sale.order.line']
+            currency_manager = self.env['res.currency']
+            import datetime
+            for order in self:
+                if order.carrier_id:
+                    carrier_product = config_carrier_product_manager.search([('odoo_carrier','=',order.carrier_id.id)])
+                    product = carrier_product.product
+
+                    temp_dict = {
+                        'bm_id': 'SHPSERV-%s'%(str(datetime.datetime.now())),
+                        'order_id': order.id,
+                        'name': product.product_tmpl_id.name if product else '',
+                        'price_unit': product.lst_price,
+                        'state': 'draft',
+                        'bm_state': 2,
+                        'product_id': product.id if product else None,
+                        'product_uom': product.product_tmpl_id.uom_id.id if product else None,
+                        'product_uom_qty': 1,
+                        'customer_lead': 0,  #
+                        'create_date': datetime.datetime.now(),
+                        'currency_id': currency_manager.search([('name', '=', 'USD')], limit=1).id,
+                        'display_type': '' if product else 'line_section'
+                    }
+                    order_line_manager.create(temp_dict)
+        except Exception:
+            pass
+
+        res = super(CenitSaleOrder, self).action_confirm()
+        return res
+
     @api.model
     def check_backmarket_order_status(self, order_ids):
 
@@ -66,6 +100,7 @@ class CenitSaleOrder(models.Model):
             product_manager = self.env['product.product']
             order_manager = self.env['sale.order']
             order_line_manager = self.env['sale.order.line']
+            carrier_manager = self.env['delivery.carrier']
 
             order = order_manager.search([('name', '=', 'BM%s' % order_temp.get('bm_id'))], limit=1)
             if order:
@@ -127,24 +162,57 @@ class CenitSaleOrder(models.Model):
 
                 partner_shipping = partner_manager.create(partner_insert_dict)
 
+            #Shipping method management
+            try:
+                shipper = carrier_manager.search([('name','=','FedEX 2 Day')],limit=1)
+                if 'shipper' in order_temp.keys() and 'usps' in order_temp['shipper'].lower():
+                    shipper = carrier_manager.search([('name', '=', 'USPS Priority Mail')], limit=1)
+            except Exception:
+                shipper = None
+
             #Creating the order
-            order_insert_dict = {
-                'name': 'BM%s' % (order_temp.get('bm_id')),
-                'origin': 'Backmarket order %s' % (order_temp.get('bm_id')),
-                'state': 'draft',
-                'bm_state': 1,
-                'date_order': parse(order_temp.get('date_creation').split('T')[0]) if order_temp.get('date_creation') else datetime.datetime.now(),
-                'validity_date': parse(order_temp.get('date_modification').split('T')[0]) if order_temp.get('date_modification') else datetime.datetime.now(),
-                'create_date': parse(order_temp['date_creation'].split('T')[0]) if order_temp[
-                    'date_creation'] else datetime.datetime.now(),
-                'confirmation_date': datetime.datetime.now(),
-                'partner_id': partner_shipping.id,
-                'partner_invoice_id': bm_partner.id,
-                'partner_shipping_id': partner_shipping.id,
-                #'currency_id': currency_manager.search([('name','=',order_temp['currency'])], limit=1).id if order_temp['currency'] else currency_manager.search([('name','=','USD')], limit=1).id,
-                'pricelist_id': self.env['product.pricelist'].search([('name', '=', 'Public Pricelist'), ('active', '=', True)], limit=1).id,
-                'bm_id': order_temp.get('bm_id')
-            }
+            if shipper:
+                order_insert_dict = {
+                    'name': 'BM%s' % (order_temp.get('bm_id')),
+                    'origin': 'Backmarket order %s' % (order_temp.get('bm_id')),
+                    'state': 'draft',
+                    'bm_state': 1,
+                    'date_order': parse(order_temp.get('date_creation').split('T')[0]) if order_temp.get('date_creation') else datetime.datetime.now(),
+                    'validity_date': parse(order_temp.get('date_modification').split('T')[0]) if order_temp.get('date_modification') else datetime.datetime.now(),
+                    'create_date': parse(order_temp['date_creation'].split('T')[0]) if order_temp[
+                        'date_creation'] else datetime.datetime.now(),
+                    'confirmation_date': datetime.datetime.now(),
+                    'partner_id': partner_shipping.id,
+                    'partner_invoice_id': bm_partner.id,
+                    'partner_shipping_id': partner_shipping.id,
+                    #'currency_id': currency_manager.search([('name','=',order_temp['currency'])], limit=1).id if order_temp['currency'] else currency_manager.search([('name','=','USD')], limit=1).id,
+                    'pricelist_id': self.env['product.pricelist'].search([('name', '=', 'Public Pricelist'), ('active', '=', True)], limit=1).id,
+                    'bm_id': order_temp.get('bm_id'),
+                    'carrier_id': shipper.id
+                }
+            else:
+                order_insert_dict = {
+                    'name': 'BM%s' % (order_temp.get('bm_id')),
+                    'origin': 'Backmarket order %s' % (order_temp.get('bm_id')),
+                    'state': 'draft',
+                    'bm_state': 1,
+                    'date_order': parse(order_temp.get('date_creation').split('T')[0]) if order_temp.get(
+                        'date_creation') else datetime.datetime.now(),
+                    'validity_date': parse(order_temp.get('date_modification').split('T')[0]) if order_temp.get(
+                        'date_modification') else datetime.datetime.now(),
+                    'create_date': parse(order_temp['date_creation'].split('T')[0]) if order_temp[
+                        'date_creation'] else datetime.datetime.now(),
+                    'confirmation_date': datetime.datetime.now(),
+                    'partner_id': partner_shipping.id,
+                    'partner_invoice_id': bm_partner.id,
+                    'partner_shipping_id': partner_shipping.id,
+                    # 'currency_id': currency_manager.search([('name','=',order_temp['currency'])], limit=1).id if order_temp['currency'] else currency_manager.search([('name','=','USD')], limit=1).id,
+                    'pricelist_id': self.env['product.pricelist'].search(
+                        [('name', '=', 'Public Pricelist'), ('active', '=', True)], limit=1).id,
+                    'bm_id': order_temp.get('bm_id')
+                }
+
+
 
             new_order = order_manager.create(order_insert_dict)
             skus = []
