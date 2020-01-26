@@ -27,39 +27,39 @@ class CenitSaleOrder(models.Model):
     bm_id = fields.Char(string=_('Backmarket id'))
     bm_state = fields.Integer(string=_('Backmarket Order State'))
 
-    @api.multi
-    def action_confirm(self):
-        try:
-            config_carrier_product_manager = self.env['cenit.wireless.carrier.product']
-            order_line_manager = self.env['sale.order.line']
-            currency_manager = self.env['res.currency']
-            import datetime
-            for order in self:
-                if order.carrier_id:
-                    carrier_product = config_carrier_product_manager.search([('odoo_carrier','=',order.carrier_id.id)])
-                    product = carrier_product.product
-
-                    temp_dict = {
-                        'bm_id': 'SHPSERV-%s'%(str(datetime.datetime.now())),
-                        'order_id': order.id,
-                        'name': product.product_tmpl_id.name if product else '',
-                        'price_unit': product.lst_price,
-                        'state': 'draft',
-                        'bm_state': 2,
-                        'product_id': product.id if product else None,
-                        'product_uom': product.product_tmpl_id.uom_id.id if product else None,
-                        'product_uom_qty': 1,
-                        'customer_lead': 0,  #
-                        'create_date': datetime.datetime.now(),
-                        'currency_id': currency_manager.search([('name', '=', 'USD')], limit=1).id,
-                        'display_type': '' if product else 'line_section'
-                    }
-                    order_line_manager.create(temp_dict)
-        except Exception:
-            pass
-
-        res = super(CenitSaleOrder, self).action_confirm()
-        return res
+    # @api.multi
+    # def action_confirm(self):
+    #     try:
+    #         config_carrier_product_manager = self.env['cenit.wireless.carrier.product']
+    #         order_line_manager = self.env['sale.order.line']
+    #         currency_manager = self.env['res.currency']
+    #         import datetime
+    #         for order in self:
+    #             if order.carrier_id:
+    #                 carrier_product = config_carrier_product_manager.search([('odoo_carrier','=',order.carrier_id.id)])
+    #                 product = carrier_product.product
+    #
+    #                 temp_dict = {
+    #                     'bm_id': 'SHPSERV-%s'%(str(datetime.datetime.now())),
+    #                     'order_id': order.id,
+    #                     'name': product.product_tmpl_id.name if product else '',
+    #                     'price_unit': product.lst_price,
+    #                     'state': 'draft',
+    #                     'bm_state': 2,
+    #                     'product_id': product.id if product else None,
+    #                     'product_uom': product.product_tmpl_id.uom_id.id if product else None,
+    #                     'product_uom_qty': 1,
+    #                     'customer_lead': 0,  #
+    #                     'create_date': datetime.datetime.now(),
+    #                     'currency_id': currency_manager.search([('name', '=', 'USD')], limit=1).id,
+    #                     'display_type': '' if product else 'line_section'
+    #                 }
+    #                 order_line_manager.create(temp_dict)
+    #     except Exception:
+    #         pass
+    #
+    #     res = super(CenitSaleOrder, self).action_confirm()
+    #     return res
 
     @api.model
     def check_backmarket_order_status(self, order_ids):
@@ -124,6 +124,7 @@ class CenitSaleOrder(models.Model):
                     'type': 'contact',
                     'title': temp_title.id,
                     'street': order_temp['billing_address'].get('street', ''),
+                    'street2': order_temp['billing_address'].get('street2', ''),
                     'city': order_temp['billing_address'].get('city', ''),
                     'country_id': country.id,
                     'zip': order_temp['billing_address'].get('postal_code', ''),
