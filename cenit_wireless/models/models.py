@@ -101,6 +101,7 @@ class CenitSaleOrder(models.Model):
             order_manager = self.env['sale.order']
             order_line_manager = self.env['sale.order.line']
             carrier_manager = self.env['delivery.carrier']
+            state_manager = self.env['res.country.state']
 
             order = order_manager.search([('name', '=', 'BM%s' % order_temp.get('bm_id'))], limit=1)
             if order:
@@ -119,6 +120,11 @@ class CenitSaleOrder(models.Model):
                 except Exception:
                     country = country_manager.search([], limit=1)
 
+                try:
+                    state = state_manager.search([('code','=', order_temp['billing_address'].get('state_or_province'))], limit=1)
+                except Exception:
+                    state = state_manager.search([], limit=1)
+
                 partner_insert_dict = {
                     'name': '%s %s'%(order_temp['billing_address'].get('first_name'),order_temp['billing_address'].get('last_name')),
                     'type': 'contact',
@@ -127,6 +133,7 @@ class CenitSaleOrder(models.Model):
                     'street2': order_temp['billing_address'].get('street2', ''),
                     'city': order_temp['billing_address'].get('city', ''),
                     'country_id': country.id,
+                    'state_id':state.id,
                     'zip': order_temp['billing_address'].get('postal_code', ''),
                     'phone': order_temp['billing_address'].get('phone', ''),
                     'email': order_temp['billing_address'].get('email', '')
