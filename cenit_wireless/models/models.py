@@ -121,7 +121,7 @@ class CenitSaleOrder(models.Model):
                     country = country_manager.search([], limit=1)
 
                 try:
-                    state = state_manager.search([('code','=', order_temp['billing_address'].get('state_or_province'))], limit=1)
+                    state = state_manager.search([('code','=', order_temp['billing_address'].get('state_or_province')), ('country_id', '=', country.id)], limit=1)
                 except Exception:
                     state = state_manager.search([], limit=1)
 
@@ -139,7 +139,7 @@ class CenitSaleOrder(models.Model):
                     'email': order_temp['billing_address'].get('email', '')
                 }
 
-                order_partner = partner_manager.create(partner_insert_dict)
+                bm_partner = partner_manager.create(partner_insert_dict)
 
             partner_shipping = partner_manager.search(
                 [('name', 'ilike', '%s %s' % (order_temp['shipping_address'].get('first_name'), order_temp['shipping_address'].get('last_name')))], limit=1)
@@ -155,13 +155,20 @@ class CenitSaleOrder(models.Model):
                 except Exception:
                     country = country_manager.search([], limit=1)
 
+                try:
+                    state = state_manager.search([('code','=', order_temp['shipping_address'].get('state_or_province')), ('country_id', '=', country.id)], limit=1)
+                except Exception:
+                    state = state_manager.search([], limit=1)
+
                 partner_insert_dict = {
                     'name': '%s %s'%(order_temp['shipping_address'].get('first_name'),order_temp['shipping_address'].get('last_name')),
                     'type': 'contact',
                     'title': temp_title.id,
                     'street': order_temp['shipping_address'].get('street', ''),
+                    'street2': order_temp['shipping_address'].get('street2', ''),
                     'city': order_temp['shipping_address'].get('city', ''),
                     'country_id': country.id,
+                    'state_id': state.id,
                     'zip': order_temp['shipping_address'].get('postal_code', ''),
                     'phone': order_temp['shipping_address'].get('phone', ''),
                     'email': order_temp['shipping_address'].get('email', ''),
@@ -169,6 +176,27 @@ class CenitSaleOrder(models.Model):
                 }
 
                 partner_shipping = partner_manager.create(partner_insert_dict)
+
+            else:
+                try:
+                    country = country_manager.search([('code','=', order_temp['shipping_address'].get('country'))], limit=1)
+                except Exception:
+                    country = country_manager.search([], limit=1)
+
+                try:
+                    state = state_manager.search([('code','=', order_temp['shipping_address'].get('state_or_province')), ('country_id', '=', country.id)], limit=1)
+                except Exception:
+                    state = state_manager.search([], limit=1)
+
+                partner_update= {
+                    'street': order_temp['shipping_address'].get('street', ''),
+                    'street2': order_temp['shipping_address'].get('street2', ''),
+                    'city': order_temp['shipping_address'].get('city', ''),
+                    'country_id': country.id,
+                    'state_id': state.id,
+                    'zip': order_temp['shipping_address'].get('postal_code', ''),
+                }
+                partner_shipping.write(partner_update)
 
             #Shipping method management
             try:
