@@ -121,7 +121,7 @@ class CenitSaleOrder(models.Model):
                     country = country_manager.search([], limit=1)
 
                 try:
-                    state = state_manager.search([('code','=', order_temp['billing_address'].get('state_or_province'))], limit=1)
+                    state = state_manager.search([('code','=', order_temp['billing_address'].get('state_or_province')), ('country_id', '=', country.id)], limit=1)
                 except Exception:
                     state = state_manager.search([], limit=1)
 
@@ -139,7 +139,7 @@ class CenitSaleOrder(models.Model):
                     'email': order_temp['billing_address'].get('email', '')
                 }
 
-                order_partner = partner_manager.create(partner_insert_dict)
+                bm_partner = partner_manager.create(partner_insert_dict)
 
             partner_shipping = partner_manager.search(
                 [('name', 'ilike', '%s %s' % (order_temp['shipping_address'].get('first_name'), order_temp['shipping_address'].get('last_name')))], limit=1)
@@ -155,13 +155,20 @@ class CenitSaleOrder(models.Model):
                 except Exception:
                     country = country_manager.search([], limit=1)
 
+                try:
+                    state = state_manager.search([('code','=', order_temp['shipping_address'].get('state_or_province')), ('country_id', '=', country.id)], limit=1)
+                except Exception:
+                    state = state_manager.search([], limit=1)
+
                 partner_insert_dict = {
                     'name': '%s %s'%(order_temp['shipping_address'].get('first_name'),order_temp['shipping_address'].get('last_name')),
                     'type': 'contact',
                     'title': temp_title.id,
                     'street': order_temp['shipping_address'].get('street', ''),
+                    'street2': order_temp['shipping_address'].get('street2', ''),
                     'city': order_temp['shipping_address'].get('city', ''),
                     'country_id': country.id,
+                    'state_id': state.id,
                     'zip': order_temp['shipping_address'].get('postal_code', ''),
                     'phone': order_temp['shipping_address'].get('phone', ''),
                     'email': order_temp['shipping_address'].get('email', ''),
@@ -169,6 +176,27 @@ class CenitSaleOrder(models.Model):
                 }
 
                 partner_shipping = partner_manager.create(partner_insert_dict)
+
+            else:
+                try:
+                    country = country_manager.search([('code','=', order_temp['shipping_address'].get('country'))], limit=1)
+                except Exception:
+                    country = country_manager.search([], limit=1)
+
+                try:
+                    state = state_manager.search([('code','=', order_temp['shipping_address'].get('state_or_province')), ('country_id', '=', country.id)], limit=1)
+                except Exception:
+                    state = state_manager.search([], limit=1)
+
+                partner_update= {
+                    'street': order_temp['shipping_address'].get('street', ''),
+                    'street2': order_temp['shipping_address'].get('street2', ''),
+                    'city': order_temp['shipping_address'].get('city', ''),
+                    'country_id': country.id,
+                    'state_id': state.id,
+                    'zip': order_temp['shipping_address'].get('postal_code', ''),
+                }
+                partner_shipping.write(partner_update)
 
             #Shipping method management
             try:
@@ -220,8 +248,6 @@ class CenitSaleOrder(models.Model):
                     'bm_id': order_temp.get('bm_id')
                 }
 
-
-
             new_order = order_manager.create(order_insert_dict)
             skus = []
             for orderline in order_temp.get('orderlines') :
@@ -251,6 +277,80 @@ class CenitSaleOrder(models.Model):
 
             #confirm the order and this method also generate the stock picking
             new_order.action_confirm()
+
+            #send order to 3PL
+            try:
+                details = []
+                subtotal = 0
+                for item in order_temp.get('orderlines'):
+                    tmp = {"numUnits": item.get('quantity'),
+                           "unitDescription": "unit_price", # ?
+                           "sku": item.get('listing'),
+                           "chargeLabel": "unit price",     # ?
+                           "chargePerUnit": item.get('price')
+                           }
+                    subtotal += int(tmp.get('numUnits')) * float(tmp.get('chargePerUnit'))
+                    details.append(tmp)
+
+                data = {
+                    "customerIdentifier": {"id": 1},    # ?
+                    "facilityIdentifier": {"id": 4},    # ?
+                    "externalId": "1275",               # ?
+                    "referenceNum": "3PLSupportTest1F", # ?
+                    "billingCode": "Prepaid",           # ?
+                    "routingInfo": {
+                        "carrier": order_temp.get('shipper'),
+                        "mode": "02",                   # ?
+                        "scacCode": "USPS"              # ?
+                    },
+                    "shipTo": {
+                        "companyName": order_temp.get('shipping_address').get('company', ""),
+                        "name": "%s %s" % (order_temp.get('shipping_address').get('first_name', ""), order_temp.get('shipping_address').get('last_name', "")),
+                        "address1": order_temp.get('shipping_address').get('street', ""),
+                        "address2": order_temp.get('shipping_address').get('street2', ""),
+                        "city": order_temp.get('shipping_address').get('city', ""),
+                        "state": order_temp.get('shipping_address').get('state_or_province', ""),
+                        "zip": order_temp.get('shipping_address').get('postal_code', ""),
+                        "country": order_temp.get('shipping_address').get('country', ""),
+                        "phoneNumber": order_temp.get('shipping_address').get('phone', "")
+                    },
+                    "billTo": {
+                        "companyName": order_temp.get('billing_address').get('company', ""),
+                        "name": "%s %s" % (order_temp.get('billing_address').get('first_name', ""), order_temp.get('billing_address').get('last_name', "")),
+                        "address1": order_temp.get('billing_address').get('street', ""),
+                        "address2": order_temp.get('billing_address').get('street2', ""),
+                        "city": order_temp.get('billing_address').get('city', ""),
+                        "state": order_temp.get('billing_address').get('state_or_province', ""),
+                        "zip": order_temp.get('billing_address').get('postal_code', ""),
+                        "country": order_temp.get('billing_address').get('country', ""),
+                        "phoneNumber": order_temp.get('billing_address').get('phone', "")
+                    },
+                    "billing": {
+                        "billingCharges": [
+                            {
+                                "chargeType": 6,        # ?
+                                "subtotal": str(subtotal),
+                                "details": details
+                            }
+                        ]
+                    },
+                    "totalWeight": 0.00,                # ?
+                    "orderItems": [
+                        {
+                            "externalId": 1,            # ?
+                            "itemIdentifier": {
+                                "sku": "3PLSupportTest" # ?
+                            },
+                            "Qty": 1                    # ?
+                        }
+                    ]
+                }
+
+                requests.post(url='https://secure-wms.com/orders/', data=data, headers={'Content-Type: application/json', 'Accept:  application/hal+json'})
+
+            except Exception:
+                pass
+
             return {'success': True, 'message': 'Order created successfully', 'order': {'order_id': new_order.name, 'skus': skus}, 'operation_type': 'create_order'}
 
         else:
