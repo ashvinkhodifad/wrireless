@@ -177,6 +177,17 @@ class CenitSaleOrder(models.Model):
 
                 partner_shipping = partner_manager.create(partner_insert_dict)
 
+                partner_update = {
+                    'street': order_temp['shipping_address'].get('street', ''),
+                    'street2': order_temp['shipping_address'].get('street2', ''),
+                    'city': order_temp['shipping_address'].get('city', ''),
+                    'country_id': country.id,
+                    'state_id': state.id,
+                    'zip': order_temp['shipping_address'].get('postal_code', ''),
+                }
+
+                partner_shipping.write(partner_update)
+
             else:
                 try:
                     country = country_manager.search([('code','=', order_temp['shipping_address'].get('country'))], limit=1)
