@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import json
+import ast
 
 import requests
 from odoo import models, fields, api, _
@@ -12,6 +13,12 @@ _logger = logging.getLogger(__name__)
 _SHIPSTATION_LIST_ORDER = "https://ssapi.shipstation.com/orders?orderNumber=%s"
 
 _SHIPSTATION_CANCEL_ORDER = "https://ssapi.shipstation.com/orders/%s"
+
+_3PL_DOMAIN = 'http://secure-wms.com/%s'
+_3PL_PATHS = {
+    'auth': 'AuthServer/api/Token',
+    'orders': 'orders'
+}
 
 
 class CenitSaleOrderLine(models.Model):
@@ -273,12 +280,12 @@ class CenitSaleOrder(models.Model):
                     'bm_id': orderline.get('id'),
                     'order_id': new_order.id,
                     'name': product.product_tmpl_id.name if product else 'BackMarket orderline %s' % (orderline.get('id')),
-                    'price_unit': orderline.get('price'),
+                    'price_unit': float(orderline.get('price'))/float(orderline.get('quantity')),
                     'state': 'draft',
                     'bm_state': 2,
                     'product_id': product.id if product else None,
                     'product_uom': product.product_tmpl_id.uom_id.id if product else None,
-                    'product_uom_qty': orderline.get('quantity') if product else None,
+                    'product_uom_qty': orderline.get('quantity'),
                     'customer_lead': 0, #
                     'create_date': parse(orderline.get('date_creation').split('T')[0]) if orderline.get('date_creation') else datetime.datetime.now(),
                     'currency_id': currency_manager.search([('name','=',orderline.get('currency'))], limit=1).id if orderline.get('currency') else currency_manager.search([('name','=','USD')], limit=1).id,
@@ -291,28 +298,53 @@ class CenitSaleOrder(models.Model):
 
             #send order to 3PL
             try:
+                # Authentication
+                ClientId = '88d80844-ed4b-48fe-a796-9ad2c42dd4a4'
+                ClientSecret = 'rTuDvfZO9RdnUjKzh1Tux5Mt5kMolUVB'
+
+                payload = {
+                    "grant_type": "client_credentials",
+                    "tpl": "{fbd0a316-12b9-47c3-ad0a-2ef13aea2418}",
+                    "user_login_id": "1194"
+                }
+                url = _3PL_DOMAIN % _3PL_PATHS['auth']
+                response = requests.post(url, auth=(ClientId, ClientSecret), json=payload)
+                auth = json.loads(response.content.decode('utf-8'))
+
                 details = []
                 subtotal = 0
+                orderitems = []
                 for item in order_temp.get('orderlines'):
-                    tmp = {"numUnits": item.get('quantity'),
-                           "unitDescription": "unit_price", # ?
-                           "sku": item.get('listing'),
-                           "chargeLabel": "unit price",     # ?
-                           "chargePerUnit": item.get('price')
-                           }
-                    subtotal += int(tmp.get('numUnits')) * float(tmp.get('chargePerUnit'))
+                    tmp = {
+                        "numUnits": item.get('quantity'),
+                        "unitDescription": "unit_price",
+                        "sku": item.get('listing'),
+                        "chargeLabel": "unit price",
+                        "chargePerUnit": float(item.get('price')) / float(item.get('quantity'))
+                    }
                     details.append(tmp)
 
-                data = {
-                    "customerIdentifier": {"id": 1},    # ?
-                    "facilityIdentifier": {"id": 4},    # ?
-                    "externalId": "1275",               # ?
-                    "referenceNum": "3PLSupportTest1F", # ?
-                    "billingCode": "Prepaid",           # ?
+                    tmp = {
+                            "externalId": item.get('id'),
+                            "itemIdentifier": {
+                                "sku": item.get('listing')
+                            },
+                            "Qty": item.get('quantity')
+                        }
+                    orderitems.append(tmp)
+
+                    subtotal += float(item.get('price'))
+
+
+                payload = {
+                    "customerIdentifier": {"id": 192},
+                    "facilityIdentifier": {"id": 10},
+                    "billingCode": "Prepaid",
+                    "externalId": str(order_temp.get('bm_id')),
+                    "referenceNum": "Arion-%s" % order_temp.get('bm_id'),
                     "routingInfo": {
                         "carrier": order_temp.get('shipper'),
-                        "mode": "02",                   # ?
-                        "scacCode": "USPS"              # ?
+                        "scacCode": order_temp.get('shipper')
                     },
                     "shipTo": {
                         "companyName": order_temp.get('shipping_address').get('company', ""),
@@ -339,28 +371,24 @@ class CenitSaleOrder(models.Model):
                     "billing": {
                         "billingCharges": [
                             {
-                                "chargeType": 6,        # ?
                                 "subtotal": str(subtotal),
                                 "details": details
                             }
                         ]
                     },
-                    "totalWeight": 0.00,                # ?
-                    "orderItems": [
-                        {
-                            "externalId": 1,            # ?
-                            "itemIdentifier": {
-                                "sku": "3PLSupportTest" # ?
-                            },
-                            "Qty": 1                    # ?
-                        }
-                    ]
+                    "orderItems": orderitems
+
                 }
+                headers = {
+                    'Content-Type': 'application/json',
+                    'Accept':  'application/hal+json',
+                    'Authorization': 'Bearer %s' % auth.get('access_token')
+                }
+                url = _3PL_DOMAIN % _3PL_PATHS['orders']
+                #response = requests.post(url, headers=headers, json=payload)
 
-                requests.post(url='https://secure-wms.com/orders/', data=data, headers={'Content-Type: application/json', 'Accept:  application/hal+json'})
-
-            except Exception:
-                pass
+            except Exception as error:
+                _logger.info(error.args[0])
 
             return {'success': True, 'message': 'Order created successfully', 'order': {'order_id': new_order.name, 'skus': skus}, 'operation_type': 'create_order'}
 
