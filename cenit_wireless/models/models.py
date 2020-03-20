@@ -385,7 +385,7 @@ class CenitSaleOrder(models.Model):
                     'Authorization': 'Bearer %s' % auth.get('access_token')
                 }
                 url = _3PL_DOMAIN % _3PL_PATHS['orders']
-                #response = requests.post(url, headers=headers, json=payload)
+                # response = requests.post(url, headers=headers, json=json.dumps(payload))
 
             except Exception as error:
                 _logger.info(error.args[0])
@@ -418,6 +418,29 @@ class CenitProductProduct(models.Model):
             return {"listing_id": product.default_code, "quantity": product.virtual_available}
         except Exception as exc:
             return {'success': False, 'message': exc}
+
+
+class StockMove(models.Model):
+    _inherit = "stock.move"
+
+    def write(self, values):
+        res = super(StockMove, self).write(values)
+        token = 'xt1vG7xykD7xRcuXKDpr'
+        headers = {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Accept - Language': 'US',
+            'Authorization': 'Basic %s' % token,
+            'User - Agent': 'escape electronics'
+
+        }
+        url = 'request: https://www.backmarket.fr/ws/listings/%s' % self.product_id
+        payload = {
+            "quantity": self.product_id.virtual_available,
+        }
+        response = requests.post(url, headers=headers, json=payload)
+
+        return res
 
 
 class CenitStockPicking(models.Model):
