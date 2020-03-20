@@ -434,7 +434,7 @@ class StockMove(models.Model):
             'User - Agent': 'escape electronics'
 
         }
-        url = 'request: https://www.backmarket.fr/ws/listings/%s' % self.product_id
+        url = 'request: https://www.backmarket.com/ws/listings/%s' % self.product_id
         payload = {
             "quantity": self.product_id.virtual_available,
         }
