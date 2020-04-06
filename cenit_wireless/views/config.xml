@@ -20,6 +20,13 @@
                             <field name='enable_sync_msg' placeholder='Enabled sync messages' />
                         </group>
                     </div>
+                    <div>
+                        <group string="BackMarket Integration Settings">
+                            <field name='bm_url' placeholder='https://www.backmarket.com' />
+                            <field name='bm_token' placeholder='Backmarket Authentication Token' />
+                            <field name='bm_user_agent' placeholder='Backmarket User Agent' />
+                        </group>
+                    </div>
                 </form>
             </field>
         </record>
