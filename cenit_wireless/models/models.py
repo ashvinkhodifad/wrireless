@@ -299,7 +299,10 @@ class CenitSaleOrder(models.Model):
             # Updated BM product qty
             for sku in skus:
                 product = self.env['product.product'].search([('default_code', '=', sku)], limit=1)
-                product.update_bm_quantity()
+                try:
+                    product.update_bm_quantity()
+                except Exception as ex:
+                    continue
 
             #send order to 3PL
             try:
