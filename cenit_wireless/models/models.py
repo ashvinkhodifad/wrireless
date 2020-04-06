@@ -3,7 +3,7 @@ import json
 import ast
 
 import requests
-from odoo import models, fields, api, _
+from odoo import models, fields, api, _, exceptions
 from odoo.exceptions import ValidationError
 
 import logging
@@ -296,6 +296,11 @@ class CenitSaleOrder(models.Model):
             #confirm the order and this method also generate the stock picking
             new_order.action_confirm()
 
+            # Updated BM product qty
+            for sku in skus:
+                product = self.env['product.product'].search([('default_code', '=', sku)], limit=1)
+                product.update_bm_quantity()
+
             #send order to 3PL
             try:
                 # Authentication
@@ -325,11 +330,10 @@ class CenitSaleOrder(models.Model):
                     details.append(tmp)
 
                     tmp = {
-                            "externalId": item.get('id'),
                             "itemIdentifier": {
                                 "sku": item.get('listing')
                             },
-                            "Qty": item.get('quantity')
+                            "qty": item.get('quantity')
                         }
                     orderitems.append(tmp)
 
@@ -337,11 +341,14 @@ class CenitSaleOrder(models.Model):
 
 
                 payload = {
-                    "customerIdentifier": {"id": 192},
-                    "facilityIdentifier": {"id": 10},
-                    "billingCode": "Prepaid",
-                    "externalId": str(order_temp.get('bm_id')),
+                    "customerIdentifier": {
+                        "id": "192"
+                    },
+                    "facilityIdentifier": {
+                        "id": "10"
+                    },
                     "referenceNum": "Arion-%s" % order_temp.get('bm_id'),
+                    "billingCode": "Prepaid",
                     "routingInfo": {
                         "carrier": order_temp.get('shipper'),
                         "scacCode": order_temp.get('shipper')
@@ -355,30 +362,10 @@ class CenitSaleOrder(models.Model):
                         "state": order_temp.get('shipping_address').get('state_or_province', ""),
                         "zip": order_temp.get('shipping_address').get('postal_code', ""),
                         "country": order_temp.get('shipping_address').get('country', ""),
-                        "phoneNumber": order_temp.get('shipping_address').get('phone', "")
-                    },
-                    "billTo": {
-                        "companyName": order_temp.get('billing_address').get('company', ""),
-                        "name": "%s %s" % (order_temp.get('billing_address').get('first_name', ""), order_temp.get('billing_address').get('last_name', "")),
-                        "address1": order_temp.get('billing_address').get('street', ""),
-                        "address2": order_temp.get('billing_address').get('street2', ""),
-                        "city": order_temp.get('billing_address').get('city', ""),
-                        "state": order_temp.get('billing_address').get('state_or_province', ""),
-                        "zip": order_temp.get('billing_address').get('postal_code', ""),
-                        "country": order_temp.get('billing_address').get('country', ""),
-                        "phoneNumber": order_temp.get('billing_address').get('phone', "")
-                    },
-                    "billing": {
-                        "billingCharges": [
-                            {
-                                "subtotal": str(subtotal),
-                                "details": details
-                            }
-                        ]
                     },
                     "orderItems": orderitems
-
                 }
+
                 headers = {
                     'Content-Type': 'application/json',
                     'Accept':  'application/hal+json',
@@ -419,28 +406,32 @@ class CenitProductProduct(models.Model):
         except Exception as exc:
             return {'success': False, 'message': exc}
 
+    @api.one
+    def update_bm_quantity(self):
+        bm_url = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless.bm_url", default=None)
+        bm_token = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless.bm_token", default=None)
+        bm_user_agent = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless.bm_user_agent", default=None)
 
-class StockMove(models.Model):
-    _inherit = "stock.move"
-
-    def write(self, values):
-        res = super(StockMove, self).write(values)
-        token = 'xt1vG7xykD7xRcuXKDpr'
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
             'Accept - Language': 'US',
-            'Authorization': 'Basic %s' % token,
-            'User - Agent': 'escape electronics'
+            'Authorization': 'Basic %s' % bm_token,
+            'User - Agent': '%s' % bm_user_agent
 
         }
-        url = 'request: https://www.backmarket.com/ws/listings/%s' % self.product_id
+
+        url = '{bm_url}/ws/listings/{default_code}'.format(bm_url=bm_url, default_code=self.default_code)
         payload = {
-            "quantity": self.product_id.virtual_available,
+            "quantity": self.virtual_available,
         }
-        response = requests.post(url, headers=headers, json=payload)
+        try:
+            _logger.info("[POST] %s ? %s ", '%s' % url, payload)
+            response = requests.post(url, headers=headers, json=payload)
+        except Exception as e:
+            _logger.error(e)
+            raise exceptions.AccessError(_("Error trying to connect to Backmarket (%s), please check the settings integrations") % url)
 
-        return res
 
 
 class CenitStockPicking(models.Model):
@@ -451,11 +442,9 @@ class CenitStockPicking(models.Model):
         result = super(CenitStockPicking, self).action_cancel()
         if result :
 
-            # API_KEY = self.env['ir.config_parameter'].get_param('odoo_cenit.shipstation.key')
-            # API_SECRET = self.env['ir.config_parameter'].get_param('odoo_cenit.shipstation.secret')
+            API_KEY = self.env['ir.config_parameter'].get_param('odoo_cenit.shipstation.key')
+            API_SECRET = self.env['ir.config_parameter'].get_param('odoo_cenit.shipstation.secret')
 
-            API_KEY = '01c7b0b2a5294d4697ed1e587f83fb73'
-            API_SECRET = '747da7fefb1c4c54bdfaf7015a5f07e1'
             response = requests.get(_SHIPSTATION_LIST_ORDER % self.origin, auth=(API_KEY, API_SECRET))
             data = json.loads(response.content)
 
