@@ -137,7 +137,7 @@ class CenitWirelessBackMarket(models.TransientModel):
     ############################################################################
 
     def set_values(self):
-        super(OmnaSettings, self).set_values()
+        super(CenitWirelessBackMarket, self).set_values()
         for record in self:
             self.env['ir.config_parameter'].sudo().set_param("omna_odoo.cenit_url", record.cenit_url or '')
             self.env['ir.config_parameter'].sudo().set_param("omna_odoo.cenit_user_key", record.cenit_user_key or '')
