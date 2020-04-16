@@ -409,7 +409,7 @@ class CenitProductProduct(models.Model):
         except Exception as exc:
             return {'success': False, 'message': exc}
 
-    @api.one
+    @api.model
     def update_bm_quantity(self):
         bm_url = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless.bm_url", default=None)
         bm_token = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless.bm_token", default=None)
@@ -418,19 +418,24 @@ class CenitProductProduct(models.Model):
         headers = {
             'Content-Type': 'application/json',
             'Accept': 'application/json',
-            'Accept - Language': 'US',
+            'Accept-Language': 'US',
             'Authorization': 'Basic %s' % bm_token,
-            'User - Agent': '%s' % bm_user_agent
-
+            'User-Agent': '%s' % bm_user_agent
         }
 
-        url = '{bm_url}/ws/listings/{default_code}'.format(bm_url=bm_url, default_code=self.default_code)
-        payload = {
-            "quantity": self.virtual_available,
-        }
         try:
+            #url = 'https://www.backmarket.com/ws/listings/detail/?sku=GLPXHS02'
+            url = '{bm_url}/ws/listings/detail/?sku={default_code}'.format(bm_url=bm_url, default_code=self.default_code)
+            _logger.info("[GET] %s ? %s ", '%s' % url)
+            response = requests.get(url=url, headers=headers)
+            product = response.json()
+
+            url = '{bm_url}/ws/listings/{listing_id}'.format(bm_url=bm_url, listing_id=product.get('listing_id', ''))
+            payload = {
+                "quantity": self.virtual_available,
+            }
             _logger.info("[POST] %s ? %s ", '%s' % url, payload)
-            response = requests.post(url, headers=headers, json=payload)
+            response = requests.post(url=url, headers=headers, json=payload)
         except Exception as e:
             _logger.error(e)
             raise exceptions.AccessError(_("Error trying to connect to Backmarket (%s), please check the settings integrations") % url)
