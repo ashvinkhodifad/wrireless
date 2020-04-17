@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data>
+
+        <record id="view_sync_products_wizard" model="ir.ui.view">
+            <field name="name">cenit.sync_bm_products.wizard.form</field>
+            <field name="model">cenit.wireless.sync_bm_products</field>
+            <field name="arch" type="xml">
+                <form string="Sync Products">
+                    <group>
+                        <div>
+                            Wizard to sync products to Backmarket.
+                        </div>
+                    </group>
+                    <footer>
+                        <button string='Sync Products' name="sync_bm_products" type="object" class="btn-primary"/>
+                        <button string="Cancel" class="btn-secondary" special="cancel"/>
+                    </footer>
+                </form>
+            </field>
+        </record>
+
+        <record id="action_sync_products_wizard" model="ir.actions.act_window">
+            <field name="name">Sync Products</field>
+            <field name="res_model">cenit.wireless.sync_bm_products</field>
+            <field name="view_mode">tree,form</field>
+            <field name="view_id" ref="view_sync_products_wizard"/>
+            <field name="target">new</field>
+        </record>
+
+        <menuitem id="menu_sync_products" name="Sync Products to Backmarket"
+                  parent="sale.sale_order_menu" sequence="5"
+                  action="action_sync_products_wizard"/>
+
+    </data>
+</odoo>

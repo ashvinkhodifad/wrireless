@@ -23,11 +23,20 @@
 
     # always loaded
     'data': [
+        # security
         'security/security.xml',
         'security/ir.model.access.csv',
+
+        # views
         'views/views.xml',
         'views/templates.xml',
         'views/config.xml',
+
+        # wizards
+        'wizard/sync_bm_products_view.xml',
+
+        # data
+        'data/ir_cron_data.xml'
     ],
     # only loaded in demonstration mode
     'demo': [

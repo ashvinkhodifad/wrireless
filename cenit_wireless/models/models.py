@@ -424,7 +424,7 @@ class CenitProductProduct(models.Model):
         }
 
         try:
-            #url = 'https://www.backmarket.com/ws/listings/detail/?sku=GLPXHS02'
+
             url = '{bm_url}/ws/listings/detail/?sku={default_code}'.format(bm_url=bm_url, default_code=self.default_code)
             _logger.info("[GET] %s ? %s ", '%s' % url)
             response = requests.get(url=url, headers=headers)
@@ -435,7 +435,7 @@ class CenitProductProduct(models.Model):
                 "quantity": self.virtual_available,
             }
             _logger.info("[POST] %s ? %s ", '%s' % url, payload)
-            response = requests.post(url=url, headers=headers, json=payload)
+            requests.post(url=url, headers=headers, json=payload)
         except Exception as e:
             _logger.error(e)
             raise exceptions.AccessError(_("Error trying to connect to Backmarket (%s), please check the settings integrations") % url)
