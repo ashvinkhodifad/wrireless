@@ -423,7 +423,7 @@ class CenitSaleOrder(models.Model):
 
         try:
             payload = {
-                "orderNumber":'Test003', # self.name,
+                "orderNumber": self.name,
                 "orderStatus": "awaiting_shipment",
                 "orderDate": self.date_order.strftime('%Y-%m-%d %H:%M:%S'),
                 "customerEmail": self.partner_id.email,
