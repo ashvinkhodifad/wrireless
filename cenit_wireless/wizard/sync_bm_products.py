@@ -9,7 +9,7 @@ _logger = logging.getLogger(__name__)
 
 class SyncBMProducts(models.TransientModel):
     _name = 'cenit.wireless.sync_bm_products'
-    # _inherit = ['mail.thread', 'mail.activity.mixin']
+    _inherit = ['mail.thread', 'mail.activity.mixin']
 
     def sync_bm_products(self):
         bm_url = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless.bm_url", default=None)
@@ -35,11 +35,11 @@ class SyncBMProducts(models.TransientModel):
             else:
                 raise exceptions.AccessError()
 
-            # updates = 0
+            updates = 0
             for listing in listings.get('results'):
                 product = Product.search([('default_code', '=', listing.get('sku'))], limit=1)
 
-                if product:
+                if product and product.virtual_available != int(listing.get('quantity')):
                     # Update specific Listing
                     url = '{bm_url}/ws/listings/{listing_id}'.format(bm_url=bm_url, listing_id=listing.get('listing_id'))
                     payload = {
@@ -47,8 +47,8 @@ class SyncBMProducts(models.TransientModel):
                     }
                     _logger.info("[POST] %s ? %s ", '%s' % url, payload)
                     requests.post(url=url, headers=headers, json=payload)
-                    # updates += 1
-            # self.message_post(body=_('%s products were updated in BackMarket'), subtype='mail.mt_comment', author_id=self.create_uid.partner_id.id)
+                    updates += 1
+            self.message_post(body=_('%s products were updated in BackMarket' % updates), subtype='mail.mt_comment', author_id=self.create_uid.partner_id.id)
         except Exception as e:
             _logger.error(e)
             raise exceptions.AccessError(

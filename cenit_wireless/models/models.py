@@ -5,6 +5,9 @@ import ast
 import requests
 from odoo import models, fields, api, _, exceptions
 from odoo.exceptions import ValidationError
+from dateutil.parser import parse
+import datetime
+import base64
 
 import logging
 
@@ -95,8 +98,7 @@ class CenitSaleOrder(models.Model):
 
     @api.model
     def save_backmarket_order(self, order):
-        from dateutil.parser import parse
-        import datetime
+
         order_temp = order[0]
 
         if order_temp:
@@ -296,6 +298,9 @@ class CenitSaleOrder(models.Model):
             #confirm the order and this method also generate the stock picking
             new_order.action_confirm()
 
+            # Sending order to Shipstation
+            new_order._send_order_Shipstation()
+
             # Updated BM product qty
             for sku in skus:
                 product = self.env['product.product'].search([('default_code', '=', sku)], limit=1)
@@ -304,81 +309,8 @@ class CenitSaleOrder(models.Model):
                 except Exception as ex:
                     continue
 
-            #send order to 3PL
-            try:
-                # Authentication
-                ClientId = '88d80844-ed4b-48fe-a796-9ad2c42dd4a4'
-                ClientSecret = 'rTuDvfZO9RdnUjKzh1Tux5Mt5kMolUVB'
-
-                payload = {
-                    "grant_type": "client_credentials",
-                    "tpl": "{fbd0a316-12b9-47c3-ad0a-2ef13aea2418}",
-                    "user_login_id": "1194"
-                }
-                url = _3PL_DOMAIN % _3PL_PATHS['auth']
-                response = requests.post(url, auth=(ClientId, ClientSecret), json=payload)
-                auth = json.loads(response.content.decode('utf-8'))
-
-                details = []
-                subtotal = 0
-                orderitems = []
-                for item in order_temp.get('orderlines'):
-                    tmp = {
-                        "numUnits": item.get('quantity'),
-                        "unitDescription": "unit_price",
-                        "sku": item.get('listing'),
-                        "chargeLabel": "unit price",
-                        "chargePerUnit": float(item.get('price')) / float(item.get('quantity'))
-                    }
-                    details.append(tmp)
-
-                    tmp = {
-                            "itemIdentifier": {
-                                "sku": item.get('listing')
-                            },
-                            "qty": item.get('quantity')
-                        }
-                    orderitems.append(tmp)
-
-                    subtotal += float(item.get('price'))
-
-
-                payload = {
-                    "customerIdentifier": {
-                        "id": "192"
-                    },
-                    "facilityIdentifier": {
-                        "id": "10"
-                    },
-                    "referenceNum": "Arion-%s" % order_temp.get('bm_id'),
-                    "billingCode": "Prepaid",
-                    "routingInfo": {
-                        "carrier": order_temp.get('shipper'),
-                        "scacCode": order_temp.get('shipper')
-                    },
-                    "shipTo": {
-                        "companyName": order_temp.get('shipping_address').get('company', ""),
-                        "name": "%s %s" % (order_temp.get('shipping_address').get('first_name', ""), order_temp.get('shipping_address').get('last_name', "")),
-                        "address1": order_temp.get('shipping_address').get('street', ""),
-                        "address2": order_temp.get('shipping_address').get('street2', ""),
-                        "city": order_temp.get('shipping_address').get('city', ""),
-                        "state": order_temp.get('shipping_address').get('state_or_province', ""),
-                        "zip": order_temp.get('shipping_address').get('postal_code', ""),
-                        "country": order_temp.get('shipping_address').get('country', ""),
-                    },
-                    "orderItems": orderitems
-                }
-
-                headers = {
-                    'Content-Type': 'application/json',
-                    'Accept':  'application/hal+json',
-                    'Authorization': 'Bearer %s' % auth.get('access_token')
-                }
-                url = _3PL_DOMAIN % _3PL_PATHS['orders']
-                # response = requests.post(url, headers=headers, json=json.dumps(payload))
-
-            except Exception as error:
-                _logger.info(error.args[0])
+            # Sending order to 3PL
+            new_order._send_order_3PL(order_temp)
 
             return {'success': True, 'message': 'Order created successfully', 'order': {'order_id': new_order.name, 'skus': skus}, 'operation_type': 'create_order'}
 
@@ -394,6 +326,132 @@ class CenitSaleOrder(models.Model):
             return {'success': True, 'message': "The order with BM id %s was cancelled successfully" % order_id, 'operation_type': 'cancel_order'}
         except Exception as error:
             return {'success': False, 'message': error, 'operation_type': 'cancel_order'}
+
+    def _send_order_3PL(self, bm_order):
+        # send order to 3PL
+        try:
+            # Authentication
+            ClientId = '88d80844-ed4b-48fe-a796-9ad2c42dd4a4'
+            ClientSecret = 'rTuDvfZO9RdnUjKzh1Tux5Mt5kMolUVB'
+
+            payload = {
+                "grant_type": "client_credentials",
+                "tpl": "{fbd0a316-12b9-47c3-ad0a-2ef13aea2418}",
+                "user_login_id": "1194"
+            }
+            url = _3PL_DOMAIN % _3PL_PATHS['auth']
+            response = requests.post(url, auth=(ClientId, ClientSecret), json=payload)
+            auth = json.loads(response.content.decode('utf-8'))
+
+            details = []
+            subtotal = 0
+            orderitems = []
+            for item in bm_order.get('orderlines'):
+                tmp = {
+                    "numUnits": item.get('quantity'),
+                    "unitDescription": "unit_price",
+                    "sku": item.get('listing'),
+                    "chargeLabel": "unit price",
+                    "chargePerUnit": float(item.get('price')) / float(item.get('quantity'))
+                }
+                details.append(tmp)
+
+                tmp = {
+                    "itemIdentifier": {
+                        "sku": item.get('listing')
+                    },
+                    "qty": item.get('quantity')
+                }
+                orderitems.append(tmp)
+
+                subtotal += float(item.get('price'))
+
+            payload = {
+                "customerIdentifier": {
+                    "id": "192"
+                },
+                "facilityIdentifier": {
+                    "id": "10"
+                },
+                "referenceNum": "Arion-%s" % bm_order.get('bm_id'),
+                "billingCode": "Prepaid",
+                "routingInfo": {
+                    "carrier": bm_order.get('shipper'),
+                    "scacCode": bm_order.get('shipper')
+                },
+                "shipTo": {
+                    "companyName": bm_order.get('shipping_address').get('company', ""),
+                    "name": "%s %s" % (bm_order.get('shipping_address').get('first_name', ""),
+                                       bm_order.get('shipping_address').get('last_name', "")),
+                    "address1": bm_order.get('shipping_address').get('street', ""),
+                    "address2": bm_order.get('shipping_address').get('street2', ""),
+                    "city": bm_order.get('shipping_address').get('city', ""),
+                    "state": bm_order.get('shipping_address').get('state_or_province', ""),
+                    "zip": bm_order.get('shipping_address').get('postal_code', ""),
+                    "country": bm_order.get('shipping_address').get('country', ""),
+                },
+                "orderItems": orderitems
+            }
+
+            headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/hal+json',
+                'Authorization': 'Bearer %s' % auth.get('access_token')
+            }
+            url = _3PL_DOMAIN % _3PL_PATHS['orders']
+            # response = requests.post(url, headers=headers, json=json.dumps(payload))
+
+        except Exception as error:
+            _logger.info(error.args[0])
+
+    def _send_order_Shipstation(self):
+
+        url = "https://ssapi.shipstation.com/orders/createorder"
+        API_KEY = self.env['ir.config_parameter'].get_param('odoo_cenit.wireless.shipstation_api_key')
+        API_SECRET = self.env['ir.config_parameter'].get_param('odoo_cenit.wireless.shipstation_api_secret')
+
+        try:
+            payload = {
+                "orderNumber": 'Test0002', #self.name,
+                "orderStatus": "awaiting_shipment",
+                "orderDate": self.date_order.strftime('%Y-%m-%d %H:%M:%S'),
+                "customerEmail": self.partner_id.email,
+                "shipTo": {
+                    "name": self.partner_shipping_id.name,
+                    "street1": self.partner_shipping_id.street,
+                    "city": self.partner_shipping_id.city,
+                    "state": self.partner_shipping_id.state_id.name,
+                    "country": self.partner_shipping_id.country_id.code,
+                    "phone": self.partner_shipping_id.mobile if self.partner_shipping_id.mobile else self.partner_shipping_id.phone,
+                    "postalCode": self.partner_shipping_id.zip
+                },
+                "billTo": {
+                    "name": self.partner_invoice_id.name,
+                    "street1": self.partner_invoice_id.street,
+                    "city": self.partner_invoice_id.city,
+                    "state": self.partner_invoice_id.state_id.name,
+                    "country": self.partner_invoice_id.country_id.code,
+                    "phone": self.partner_invoice_id.mobile if self.partner_invoice_id.mobile else self.partner_invoice_id.phone,
+                    "postalCode": self.partner_invoice_id.zip
+                },
+                "items": [{"sku": orderline.product_id.default_code, "name": orderline.product_id.name,
+                           "quantity": int(orderline.product_uom_qty), "unitPrice": orderline.price_unit} for orderline in
+                          self.order_line]
+            }
+
+            headers = {
+                'Host': 'ssapi.shipstation.com',
+                'Content-Type': 'application/json'
+            }
+
+            response = requests.post(url, headers=headers, data=json.dumps(payload), auth=(API_KEY, API_SECRET))
+            if 200 <= response.status_code < 300:
+                _logger.info("The order %s was created/updated in shipstation successfuly" % self.name)
+            if 400 <= response.status_code < 500:
+                _logger.warning("Error trying to connect to Shipstation's API")
+
+        except Exception as error:
+            _logger.info(error.args[0])
 
 
 class CenitProductProduct(models.Model):
