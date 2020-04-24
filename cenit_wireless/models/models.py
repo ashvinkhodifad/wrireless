@@ -34,8 +34,9 @@ class CenitSaleOrderLine(models.Model):
 class CenitSaleOrder(models.Model):
     _inherit = "sale.order"
 
-    bm_id = fields.Char(string=_('Backmarket id'))
+    bm_id = fields.Char(string=_('Backmarket ID'))
     bm_state = fields.Integer(string=_('Backmarket Order State'))
+    shipstation_id = fields.Char(string=_('Shispstation ID'))
 
     # @api.multi
     # def action_confirm(self):
@@ -295,11 +296,8 @@ class CenitSaleOrder(models.Model):
                 }
                 order_line_manager.create(ol_dict)
 
-            #confirm the order and this method also generate the stock picking
+            #confirm the order and this method also generate the stock picking and sends the order to Shipstation
             new_order.action_confirm()
-
-            # Sending order to Shipstation
-            new_order._send_order_Shipstation()
 
             # Updated BM product qty
             for sku in skus:
@@ -310,7 +308,7 @@ class CenitSaleOrder(models.Model):
                     continue
 
             # Sending order to 3PL
-            new_order._send_order_3PL(order_temp)
+            # new_order._send_order_3PL(order_temp)
 
             return {'success': True, 'message': 'Order created successfully', 'order': {'order_id': new_order.name, 'skus': skus}, 'operation_type': 'create_order'}
 
@@ -326,6 +324,18 @@ class CenitSaleOrder(models.Model):
             return {'success': True, 'message': "The order with BM id %s was cancelled successfully" % order_id, 'operation_type': 'cancel_order'}
         except Exception as error:
             return {'success': False, 'message': error, 'operation_type': 'cancel_order'}
+
+    @api.multi
+    def action_confirm(self):
+        result = super(CenitSaleOrder, self).action_confirm()
+        self._send_order_Shipstation()
+        return result
+
+    @api.multi
+    def action_cancel(self):
+        result = super(CenitSaleOrder, self).action_cancel()
+        self._cancel_order_Shipstation()
+        return result
 
     def _send_order_3PL(self, bm_order):
         # send order to 3PL
@@ -404,6 +414,7 @@ class CenitSaleOrder(models.Model):
         except Exception as error:
             _logger.info(error.args[0])
 
+    @api.multi
     def _send_order_Shipstation(self):
 
         url = "https://ssapi.shipstation.com/orders/createorder"
@@ -412,7 +423,7 @@ class CenitSaleOrder(models.Model):
 
         try:
             payload = {
-                "orderNumber": 'Test0002', #self.name,
+                "orderNumber":'Test003', # self.name,
                 "orderStatus": "awaiting_shipment",
                 "orderDate": self.date_order.strftime('%Y-%m-%d %H:%M:%S'),
                 "customerEmail": self.partner_id.email,
@@ -430,6 +441,7 @@ class CenitSaleOrder(models.Model):
                     "street1": self.partner_invoice_id.street,
                     "city": self.partner_invoice_id.city,
                     "state": self.partner_invoice_id.state_id.name,
+
                     "country": self.partner_invoice_id.country_id.code,
                     "phone": self.partner_invoice_id.mobile if self.partner_invoice_id.mobile else self.partner_invoice_id.phone,
                     "postalCode": self.partner_invoice_id.zip
@@ -446,6 +458,8 @@ class CenitSaleOrder(models.Model):
 
             response = requests.post(url, headers=headers, data=json.dumps(payload), auth=(API_KEY, API_SECRET))
             if 200 <= response.status_code < 300:
+                data = response.json()
+                self.write({'shipstation_id': data.get('orderId')})
                 _logger.info("The order %s was created/updated in shipstation successfuly" % self.name)
             if 400 <= response.status_code < 500:
                 _logger.warning("Error trying to connect to Shipstation's API")
@@ -453,6 +467,20 @@ class CenitSaleOrder(models.Model):
         except Exception as error:
             _logger.info(error.args[0])
 
+    @api.multi
+    def _cancel_order_Shipstation(self):
+        url = "https://ssapi.shipstation.com/orders/%s"
+        API_KEY = self.env['ir.config_parameter'].get_param('odoo_cenit.wireless.shipstation_api_key')
+        API_SECRET = self.env['ir.config_parameter'].get_param('odoo_cenit.wireless.shipstation_api_secret')
+
+        headers = {
+            'Host': 'ssapi.shipstation.com',
+        }
+
+        for order in self:
+            response = requests.delete(url % order.shipstation_id, headers=headers, data={}, auth=(API_KEY, API_SECRET))
+            if 400 <= response.status_code < 500:
+                _logger.warning("Error trying to connect to Shipstation's API")
 
 class CenitProductProduct(models.Model):
     _inherit = "product.product"
@@ -484,7 +512,7 @@ class CenitProductProduct(models.Model):
         try:
 
             url = '{bm_url}/ws/listings/detail/?sku={default_code}'.format(bm_url=bm_url, default_code=self.default_code)
-            _logger.info("[GET] %s ? %s ", '%s' % url)
+            _logger.info("[GET] %s " % url)
             response = requests.get(url=url, headers=headers)
             product = response.json()
 
@@ -506,25 +534,27 @@ class CenitStockPicking(models.Model):
     @api.multi
     def action_cancel(self):
         result = super(CenitStockPicking, self).action_cancel()
-        if result :
+        # if result :
+        #
+        #     API_KEY = self.env['ir.config_parameter'].get_param('odoo_cenit.shipstation.key')
+        #     API_SECRET = self.env['ir.config_parameter'].get_param('odoo_cenit.shipstation.secret')
+        #
+        #     response = requests.get(_SHIPSTATION_LIST_ORDER % self.origin, auth=(API_KEY, API_SECRET))
+        #     data = json.loads(response.content)
+        #
+        #     for order in data.get('orders'):
+        #         response = requests.delete(_SHIPSTATION_CANCEL_ORDER % order.get('orderId'), auth=(API_KEY, API_SECRET))
+        #         if not response.status_code == 200:
+        #             _logger.info("Order {name} Cancelled. Success: {code}, Message: {message}".format(name=self.origin,
+        #                                                                                               code=data.get(
+        #                                                                                                   'success'),
+        #                                                                                               message=data.get(
+        #                                                                                                   'message')))
+        #             raise ValidationError(_("Error cancelling order %s in Shipstation" % self.origin))
 
-            API_KEY = self.env['ir.config_parameter'].get_param('odoo_cenit.shipstation.key')
-            API_SECRET = self.env['ir.config_parameter'].get_param('odoo_cenit.shipstation.secret')
+        return result
 
-            response = requests.get(_SHIPSTATION_LIST_ORDER % self.origin, auth=(API_KEY, API_SECRET))
-            data = json.loads(response.content)
 
-            for order in data.get('orders'):
-                response = requests.delete(_SHIPSTATION_CANCEL_ORDER % order.get('orderId'), auth=(API_KEY, API_SECRET))
-                if not response.status_code == 200:
-                    _logger.info("Order {name} Cancelled. Success: {code}, Message: {message}".format(name=self.origin,
-                                                                                                      code=data.get(
-                                                                                                          'success'),
-                                                                                                      message=data.get(
-                                                                                                          'message')))
-                    raise ValidationError(_("Error cancelling order %s in Shipstation" % self.origin))
-
-        return True
 
 
 
