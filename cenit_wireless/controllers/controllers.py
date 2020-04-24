@@ -15,10 +15,8 @@ class CenitWireless(http.Controller):
         _logger.info('The webhook is called successfuly')
 
         data = json.loads(http.request.httprequest.data)
-        API_KEY = http.request.env['ir.config_parameter'].sudo().get_param('odoo_cenit.shipstation.key')
-        #encode_key = base64.b64encode(bytes(API_KEY, 'utf-8'))
-        API_SECRET = http.request.env['ir.config_parameter'].sudo().get_param('odoo_cenit.shipstation.secret')
-        #encode_secret = base64.b64encode(bytes(API_SECRET, 'utf-8'))
+        API_KEY = http.request.env['ir.config_parameter'].sudo().get_param('odoo_cenit.wireless.shipstation_api_key')
+        API_SECRET = http.request.env['ir.config_parameter'].sudo().get_param('odoo_cenit.wireless.shipstation_api_secret')
         response = requests.get(data.get('resource_url'), auth=(API_KEY, API_SECRET))
         ss_data = json.loads(response.content)
 
