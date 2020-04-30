@@ -101,7 +101,6 @@ class CenitSaleOrder(models.Model):
     def save_backmarket_order(self, order):
 
         order_temp = order[0]
-
         if order_temp:
             partner_manager = self.env['res.partner']
             partner_title_manager = self.env['res.partner.title']
@@ -308,10 +307,9 @@ class CenitSaleOrder(models.Model):
                     continue
 
             # Sending order to 3PL
-            # new_order._send_order_3PL(order_temp)
+            new_order._send_order_3PL(order_temp)
 
             return {'success': True, 'message': 'Order created successfully', 'order': {'order_id': new_order.name, 'skus': skus}, 'operation_type': 'create_order'}
-
         else:
             return {'success': False, 'message': 'Empty order', 'operation_type': 'create_order'}
 
@@ -341,53 +339,35 @@ class CenitSaleOrder(models.Model):
         # send order to 3PL
         try:
             # Authentication
-            ClientId = '88d80844-ed4b-48fe-a796-9ad2c42dd4a4'
-            ClientSecret = 'rTuDvfZO9RdnUjKzh1Tux5Mt5kMolUVB'
+            _3pl_client_id = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless._3pl_client_id", default=None),
+            _3pl_client_secret = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless._3pl_client_secret", default=None),
+            _3pl_costumer_id = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless._3pl_costumer_id", default=None),
+            _3pl_facility_id = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless._3pl_facility_id", default=None),
+            _3pl_tpl_guid = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless._3pl_tpl_guid", default=None),
+            _3pl_userlogin_id = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless._3pl_userlogin_id", default=None)
 
             payload = {
                 "grant_type": "client_credentials",
-                "tpl": "{fbd0a316-12b9-47c3-ad0a-2ef13aea2418}",
-                "user_login_id": "1194"
+                "tpl": "{%s}" % _3pl_tpl_guid,
+                "user_login_id": "%s" % _3pl_userlogin_id
             }
             url = _3PL_DOMAIN % _3PL_PATHS['auth']
-            response = requests.post(url, auth=(ClientId, ClientSecret), json=payload)
-            auth = json.loads(response.content.decode('utf-8'))
+            response = requests.post(url, auth=(''.join(_3pl_client_id), ''.join(_3pl_client_secret)), json=payload)
+            auth = response.json()
 
-            details = []
-            subtotal = 0
-            orderitems = []
-            for item in bm_order.get('orderlines'):
-                tmp = {
-                    "numUnits": item.get('quantity'),
-                    "unitDescription": "unit_price",
-                    "sku": item.get('listing'),
-                    "chargeLabel": "unit price",
-                    "chargePerUnit": float(item.get('price')) / float(item.get('quantity'))
-                }
-                details.append(tmp)
-
-                tmp = {
-                    "itemIdentifier": {
-                        "sku": item.get('listing')
-                    },
-                    "qty": item.get('quantity')
-                }
-                orderitems.append(tmp)
-
-                subtotal += float(item.get('price'))
-
+            # Sending the order
             payload = {
                 "customerIdentifier": {
-                    "id": "192"
+                    "id": ''.join(_3pl_costumer_id)
                 },
                 "facilityIdentifier": {
-                    "id": "10"
+                    "id": ''.join(_3pl_facility_id)
                 },
-                "referenceNum": "Arion-%s" % bm_order.get('bm_id'),
+                "referenceNum": "BM%s" % bm_order.get('bm_id'),
                 "billingCode": "Prepaid",
                 "routingInfo": {
                     "carrier": bm_order.get('shipper'),
-                    "scacCode": bm_order.get('shipper')
+                    "mode": "92" # We need to ask about this field
                 },
                 "shipTo": {
                     "companyName": bm_order.get('shipping_address').get('company', ""),
@@ -400,16 +380,28 @@ class CenitSaleOrder(models.Model):
                     "zip": bm_order.get('shipping_address').get('postal_code', ""),
                     "country": bm_order.get('shipping_address').get('country', ""),
                 },
-                "orderItems": orderitems
+                "billTo": {
+                    "name": "%s %s" % (bm_order.get('billing_address').get('first_name', ""),
+                                       bm_order.get('billing_address').get('last_name', "")),
+                    "address1": bm_order.get('billing_address').get('street', ""),
+                    "address2": bm_order.get('billing_address').get('street2', ""),
+                    "city": bm_order.get('billing_address').get('city', ""),
+                    "state": bm_order.get('billing_address').get('state_or_province', ""),
+                    "zip": bm_order.get('billing_address').get('postal_code', ""),
+                    "country": bm_order.get('billing_address').get('country', ""),
+                },
+                "orderItems": [{"itemIdentifier": {"sku": item.get('listing')}, "qty": item.get('quantity')} for item in bm_order.get('orderlines')]
             }
 
             headers = {
                 'Content-Type': 'application/json',
                 'Accept': 'application/hal+json',
-                'Authorization': 'Bearer %s' % auth.get('access_token')
+                'Authorization': 'Bearer {token}'.format(token=auth.get('access_token'))
             }
             url = _3PL_DOMAIN % _3PL_PATHS['orders']
-            # response = requests.post(url, headers=headers, json=json.dumps(payload))
+            response = requests.post(url, headers=headers, data=json.dumps(payload))
+            if 200 <= response.status_code < 300:
+                _logger.info("The order %s was created in 3PL successfuly" % self.name)
 
         except Exception as error:
             _logger.info(error.args[0])

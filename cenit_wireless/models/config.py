@@ -45,6 +45,13 @@ class CenitWirelessSettings(models.TransientModel):
     shipstation_api_secret = fields.Char('Shipstation API Secret', required=True)
     shipstation_store = fields.Char('Shipstation Store')
 
+    _3pl_client_id = fields.Char('3PL Client ID', required=True)
+    _3pl_client_secret = fields.Char('3PL Client Secret', required=True)
+    _3pl_costumer_id = fields.Char('3PL Customer ID', required=True)
+    _3pl_facility_id = fields.Char('3PL Facility ID', required=True)
+    _3pl_tpl_guid = fields.Char('3PL TPL GUID', required=True)
+    _3pl_userlogin_id = fields.Char('3PL UserLogin ID', required=True)
+
 
     ############################################################################
     # Default Getters
@@ -80,7 +87,14 @@ class CenitWirelessSettings(models.TransientModel):
             bm_user_agent = self.env["ir.config_parameter"].sudo().get_param("odoo_cenit.wireless.bm_user_agent", default=None),
             shipstation_api_key=self.env["ir.config_parameter"].sudo().get_param("odoo_cenit.wireless.shipstation_api_key", default=None),
             shipstation_api_secret=self.env["ir.config_parameter"].sudo().get_param("odoo_cenit.wireless.shipstation_api_secret", default=None),
-            shipstation_store=self.env["ir.config_parameter"].sudo().get_param("odoo_cenit.wireless.shipstation_store", default=None)
+            shipstation_store=self.env["ir.config_parameter"].sudo().get_param("odoo_cenit.wireless.shipstation_store", default=None),
+            _3pl_client_id=self.env["ir.config_parameter"].sudo().get_param("odoo_cenit.wireless._3pl_client_id", default=None),
+            _3pl_client_secret=self.env["ir.config_parameter"].sudo().get_param("odoo_cenit.wireless._3pl_client_secret", default=None),
+            _3pl_costumer_id=self.env["ir.config_parameter"].sudo().get_param("odoo_cenit.wireless._3pl_costumer_id", default=None),
+            _3pl_facility_id=self.env["ir.config_parameter"].sudo().get_param("odoo_cenit.wireless._3pl_facility_id", default=None),
+            _3pl_tpl_guid=self.env["ir.config_parameter"].sudo().get_param("odoo_cenit.wireless._3pl_tpl_guid", default=None),
+            _3pl_userlogin_id=self.env["ir.config_parameter"].sudo().get_param("odoo_cenit.wireless._3pl_userlogin_id", default=None)
+
         )
         return res
 
@@ -116,6 +130,12 @@ class CenitWirelessSettings(models.TransientModel):
             self.env['ir.config_parameter'].sudo().set_param("odoo_cenit.wireless.shipstation_api_key", record.shipstation_api_key or '')
             self.env['ir.config_parameter'].sudo().set_param("odoo_cenit.wireless.shipstation_api_secret", record.shipstation_api_secret or '')
             self.env['ir.config_parameter'].sudo().set_param("odoo_cenit.wireless.shipstation_store", record.shipstation_store or '')
+            self.env['ir.config_parameter'].sudo().set_param("odoo_cenit.wireless._3pl_client_id", record._3pl_client_id or '')
+            self.env['ir.config_parameter'].sudo().set_param("odoo_cenit.wireless._3pl_client_secret", record._3pl_client_secret or '')
+            self.env['ir.config_parameter'].sudo().set_param("odoo_cenit.wireless._3pl_costumer_id", record._3pl_costumer_id or '')
+            self.env['ir.config_parameter'].sudo().set_param("odoo_cenit.wireless._3pl_facility_id", record._3pl_facility_id or '')
+            self.env['ir.config_parameter'].sudo().set_param("odoo_cenit.wireless._3pl_tpl_guid", record._3pl_tpl_guid or '')
+            self.env['ir.config_parameter'].sudo().set_param("odoo_cenit.wireless._3pl_userlogin_id", record._3pl_userlogin_id or '')
 
 
 
