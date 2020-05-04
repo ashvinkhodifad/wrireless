@@ -535,8 +535,8 @@ class CenitStockPicking(models.Model):
         res = super(CenitStockPicking, self).create(vals)
         order = self.env['sale.order'].search([('name', '=', res.origin)], limit=1)
         # if order and res.picking_type_id.name == 'Javelin: Delivery Orders':
-        if order and 'Javelin: Delivery Orders' in str(res.picking_type_id):
-            order._send_order_3PL()
+        #if order and 'Javelin: Delivery Orders' in str(res.picking_type_id):
+        order._send_order_3PL()
         return res
 
 
