@@ -96,12 +96,10 @@ class CenitSaleOrder(models.Model):
 
         return result
 
-
     @api.model
     def save_backmarket_order(self, order):
 
         order_temp = order[0]
-
         if order_temp:
             partner_manager = self.env['res.partner']
             partner_title_manager = self.env['res.partner.title']
@@ -228,46 +226,30 @@ class CenitSaleOrder(models.Model):
                 shipper = None
 
             #Creating the order
+            order_insert_dict = {
+                'name': 'BM%s' % (order_temp.get('bm_id')),
+                'origin': 'Backmarket order %s' % (order_temp.get('bm_id')),
+                'state': 'draft',
+                'bm_state': 1,
+                'date_order': parse(order_temp.get('date_creation').split('T')[0]) if order_temp.get(
+                    'date_creation') else datetime.datetime.now(),
+                'validity_date': parse(order_temp.get('date_modification').split('T')[0]) if order_temp.get(
+                    'date_modification') else datetime.datetime.now(),
+                'create_date': parse(order_temp['date_creation'].split('T')[0]) if order_temp[
+                    'date_creation'] else datetime.datetime.now(),
+                'confirmation_date': datetime.datetime.now(),
+                'partner_id': partner_shipping.id,
+                'partner_invoice_id': bm_partner.id,
+                'partner_shipping_id': partner_shipping.id,
+                # 'currency_id': currency_manager.search([('name','=',order_temp['currency'])], limit=1).id if order_temp['currency'] else currency_manager.search([('name','=','USD')], limit=1).id,
+                'pricelist_id': self.env['product.pricelist'].search(
+                    [('name', '=', 'Public Pricelist'), ('active', '=', True)], limit=1).id,
+                'bm_id': order_temp.get('bm_id')
+            }
+
             if shipper:
-                order_insert_dict = {
-                    'name': 'BM%s' % (order_temp.get('bm_id')),
-                    'origin': 'Backmarket order %s' % (order_temp.get('bm_id')),
-                    'state': 'draft',
-                    'bm_state': 1,
-                    'date_order': parse(order_temp.get('date_creation').split('T')[0]) if order_temp.get('date_creation') else datetime.datetime.now(),
-                    'validity_date': parse(order_temp.get('date_modification').split('T')[0]) if order_temp.get('date_modification') else datetime.datetime.now(),
-                    'create_date': parse(order_temp['date_creation'].split('T')[0]) if order_temp[
-                        'date_creation'] else datetime.datetime.now(),
-                    'confirmation_date': datetime.datetime.now(),
-                    'partner_id': partner_shipping.id,
-                    'partner_invoice_id': bm_partner.id,
-                    'partner_shipping_id': partner_shipping.id,
-                    #'currency_id': currency_manager.search([('name','=',order_temp['currency'])], limit=1).id if order_temp['currency'] else currency_manager.search([('name','=','USD')], limit=1).id,
-                    'pricelist_id': self.env['product.pricelist'].search([('name', '=', 'Public Pricelist'), ('active', '=', True)], limit=1).id,
-                    'bm_id': order_temp.get('bm_id'),
-                    'carrier_id': shipper.id
-                }
-            else:
-                order_insert_dict = {
-                    'name': 'BM%s' % (order_temp.get('bm_id')),
-                    'origin': 'Backmarket order %s' % (order_temp.get('bm_id')),
-                    'state': 'draft',
-                    'bm_state': 1,
-                    'date_order': parse(order_temp.get('date_creation').split('T')[0]) if order_temp.get(
-                        'date_creation') else datetime.datetime.now(),
-                    'validity_date': parse(order_temp.get('date_modification').split('T')[0]) if order_temp.get(
-                        'date_modification') else datetime.datetime.now(),
-                    'create_date': parse(order_temp['date_creation'].split('T')[0]) if order_temp[
-                        'date_creation'] else datetime.datetime.now(),
-                    'confirmation_date': datetime.datetime.now(),
-                    'partner_id': partner_shipping.id,
-                    'partner_invoice_id': bm_partner.id,
-                    'partner_shipping_id': partner_shipping.id,
-                    # 'currency_id': currency_manager.search([('name','=',order_temp['currency'])], limit=1).id if order_temp['currency'] else currency_manager.search([('name','=','USD')], limit=1).id,
-                    'pricelist_id': self.env['product.pricelist'].search(
-                        [('name', '=', 'Public Pricelist'), ('active', '=', True)], limit=1).id,
-                    'bm_id': order_temp.get('bm_id')
-                }
+                order_insert_dict["carrier_id"] = shipper.id
+
 
             new_order = order_manager.create(order_insert_dict)
             skus = []
@@ -307,11 +289,7 @@ class CenitSaleOrder(models.Model):
                 except Exception as ex:
                     continue
 
-            # Sending order to 3PL
-            # new_order._send_order_3PL(order_temp)
-
             return {'success': True, 'message': 'Order created successfully', 'order': {'order_id': new_order.name, 'skus': skus}, 'operation_type': 'create_order'}
-
         else:
             return {'success': False, 'message': 'Empty order', 'operation_type': 'create_order'}
 
@@ -336,83 +314,6 @@ class CenitSaleOrder(models.Model):
         result = super(CenitSaleOrder, self).action_cancel()
         self._cancel_order_Shipstation()
         return result
-
-    def _send_order_3PL(self, bm_order):
-        # send order to 3PL
-        try:
-            # Authentication
-            ClientId = '88d80844-ed4b-48fe-a796-9ad2c42dd4a4'
-            ClientSecret = 'rTuDvfZO9RdnUjKzh1Tux5Mt5kMolUVB'
-
-            payload = {
-                "grant_type": "client_credentials",
-                "tpl": "{fbd0a316-12b9-47c3-ad0a-2ef13aea2418}",
-                "user_login_id": "1194"
-            }
-            url = _3PL_DOMAIN % _3PL_PATHS['auth']
-            response = requests.post(url, auth=(ClientId, ClientSecret), json=payload)
-            auth = json.loads(response.content.decode('utf-8'))
-
-            details = []
-            subtotal = 0
-            orderitems = []
-            for item in bm_order.get('orderlines'):
-                tmp = {
-                    "numUnits": item.get('quantity'),
-                    "unitDescription": "unit_price",
-                    "sku": item.get('listing'),
-                    "chargeLabel": "unit price",
-                    "chargePerUnit": float(item.get('price')) / float(item.get('quantity'))
-                }
-                details.append(tmp)
-
-                tmp = {
-                    "itemIdentifier": {
-                        "sku": item.get('listing')
-                    },
-                    "qty": item.get('quantity')
-                }
-                orderitems.append(tmp)
-
-                subtotal += float(item.get('price'))
-
-            payload = {
-                "customerIdentifier": {
-                    "id": "192"
-                },
-                "facilityIdentifier": {
-                    "id": "10"
-                },
-                "referenceNum": "Arion-%s" % bm_order.get('bm_id'),
-                "billingCode": "Prepaid",
-                "routingInfo": {
-                    "carrier": bm_order.get('shipper'),
-                    "scacCode": bm_order.get('shipper')
-                },
-                "shipTo": {
-                    "companyName": bm_order.get('shipping_address').get('company', ""),
-                    "name": "%s %s" % (bm_order.get('shipping_address').get('first_name', ""),
-                                       bm_order.get('shipping_address').get('last_name', "")),
-                    "address1": bm_order.get('shipping_address').get('street', ""),
-                    "address2": bm_order.get('shipping_address').get('street2', ""),
-                    "city": bm_order.get('shipping_address').get('city', ""),
-                    "state": bm_order.get('shipping_address').get('state_or_province', ""),
-                    "zip": bm_order.get('shipping_address').get('postal_code', ""),
-                    "country": bm_order.get('shipping_address').get('country', ""),
-                },
-                "orderItems": orderitems
-            }
-
-            headers = {
-                'Content-Type': 'application/json',
-                'Accept': 'application/hal+json',
-                'Authorization': 'Bearer %s' % auth.get('access_token')
-            }
-            url = _3PL_DOMAIN % _3PL_PATHS['orders']
-            # response = requests.post(url, headers=headers, json=json.dumps(payload))
-
-        except Exception as error:
-            _logger.info(error.args[0])
 
     @api.multi
     def _send_order_Shipstation(self):
@@ -482,6 +383,82 @@ class CenitSaleOrder(models.Model):
             if 400 <= response.status_code < 500:
                 _logger.warning("Error trying to connect to Shipstation's API")
 
+    def _send_order_3PL(self):
+        # send order to 3PL
+        try:
+            # Authentication
+            _3pl_client_id = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless._3pl_client_id",
+                                                                       default=None),
+            _3pl_client_secret = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless._3pl_client_secret",
+                                                                           default=None),
+            _3pl_costumer_id = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless._3pl_costumer_id",
+                                                                         default=None),
+            _3pl_facility_id = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless._3pl_facility_id",
+                                                                         default=None),
+            _3pl_tpl_guid = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless._3pl_tpl_guid",
+                                                                      default=None),
+            _3pl_userlogin_id = self.env["ir.config_parameter"].get_param("odoo_cenit.wireless._3pl_userlogin_id",
+                                                                          default=None)
+
+            payload = {
+                "grant_type": "client_credentials",
+                "tpl": "{%s}" % _3pl_tpl_guid,
+                "user_login_id": "%s" % _3pl_userlogin_id
+            }
+            url = _3PL_DOMAIN % _3PL_PATHS['auth']
+            response = requests.post(url, auth=(''.join(_3pl_client_id), ''.join(_3pl_client_secret)), json=payload)
+            auth = response.json()
+
+            # Sending the order
+            payload = {
+                "customerIdentifier": {
+                    "id": ''.join(_3pl_costumer_id)
+                },
+                "facilityIdentifier": {
+                    "id": ''.join(_3pl_facility_id)
+                },
+                "referenceNum": self.name,
+                "billingCode": "Prepaid",
+                "routingInfo": {
+                    "carrier": self.carrier_id.name if self.carrier_id else 'USPS',
+                    "mode": " Priority Mail"  # We need to ask about this field
+                },
+                "shipTo": {
+                    "name": self.partner_shipping_id.name,
+                    "address1": self.partner_shipping_id.street,
+                    "address2": self.partner_shipping_id.street2 if self.partner_shipping_id.street2 else '',
+                    "city": self.partner_shipping_id.city,
+                    "state": self.partner_shipping_id.state_id.name,
+                    "zip": self.partner_shipping_id.zip,
+                    "country": self.partner_shipping_id.country_id.code
+                },
+                "billTo": {
+                    "name": self.partner_invoice_id.name,
+                    "address1": self.partner_invoice_id.street,
+                    "address2": self.partner_invoice_id.street2 if self.partner_invoice_id.street2 else '',
+                    "city": self.partner_invoice_id.city,
+                    "state": self.partner_invoice_id.state_id.name,
+                    "zip": self.partner_invoice_id.zip,
+                    "country": self.partner_invoice_id.country_id.code
+                },
+                "orderItems": [{"itemIdentifier": {"sku": orderline.product_id.default_code}, "qty": int(orderline.product_uom_qty)}
+                               for orderline in self.order_line]
+            }
+
+            headers = {
+                'Content-Type': 'application/json',
+                'Accept': 'application/hal+json',
+                'Authorization': 'Bearer {token}'.format(token=auth.get('access_token'))
+            }
+            url = _3PL_DOMAIN % _3PL_PATHS['orders']
+            response = requests.post(url, headers=headers, data=json.dumps(payload))
+            if 200 <= response.status_code < 300:
+                _logger.info("The order %s was created in 3PL successfuly" % self.name)
+
+        except Exception as error:
+            _logger.info(error.args[0])
+
+
 class CenitProductProduct(models.Model):
     _inherit = "product.product"
 
@@ -527,7 +504,6 @@ class CenitProductProduct(models.Model):
             raise exceptions.AccessError(_("Error trying to connect to Backmarket (%s), please check the settings integrations") % url)
 
 
-
 class CenitStockPicking(models.Model):
     _inherit = "stock.picking"
 
@@ -553,6 +529,17 @@ class CenitStockPicking(models.Model):
         #             raise ValidationError(_("Error cancelling order %s in Shipstation" % self.origin))
 
         return result
+
+    @api.model
+    def create(self, vals):
+        res = super(CenitStockPicking, self).create(vals)
+        order = self.env['sale.order'].search([('name', '=', res.origin)], limit=1)
+        if order and res.picking_type_id.name == 'Javelin: Delivery Orders':
+            order._send_order_3PL()
+        return res
+
+
+
 
 
 

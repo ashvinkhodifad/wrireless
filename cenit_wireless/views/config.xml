@@ -36,6 +36,17 @@
                             <field name='shipstation_store' placeholder='Shipstation Store' />
                         </group>
                     </div>
+
+                    <div>
+                        <group string="3PL Integration Settings">
+                            <field name='_3pl_client_id' placeholder='3PL Client ID' />
+                            <field name='_3pl_client_secret' placeholder='3PL Client Secret' />
+                            <field name='_3pl_costumer_id' placeholder='230' />
+                            <field name='_3pl_facility_id' placeholder='84' />
+                            <field name='_3pl_tpl_guid' placeholder='ert0a852-78b9-91h4-ut8x-7tg136wsx3574' />
+                            <field name='_3pl_userlogin_id' placeholder='9512' />
+                        </group>
+                    </div>
                 </form>
             </field>
         </record>
