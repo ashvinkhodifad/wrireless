@@ -331,6 +331,7 @@ class CenitSaleOrder(models.Model):
                 "shipTo": {
                     "name": self.partner_shipping_id.name,
                     "street1": self.partner_shipping_id.street,
+                    'street2': self.partner_shipping_id.street2 if self.partner_shipping_id.street2 else '',
                     "city": self.partner_shipping_id.city,
                     "state": self.partner_shipping_id.state_id.name,
                     "country": self.partner_shipping_id.country_id.code,
@@ -340,9 +341,9 @@ class CenitSaleOrder(models.Model):
                 "billTo": {
                     "name": self.partner_invoice_id.name,
                     "street1": self.partner_invoice_id.street,
+                    'street2': self.partner_invoice_id.street2 if self.partner_invoice_id.street2 else '',
                     "city": self.partner_invoice_id.city,
                     "state": self.partner_invoice_id.state_id.name,
-
                     "country": self.partner_invoice_id.country_id.code,
                     "phone": self.partner_invoice_id.mobile if self.partner_invoice_id.mobile else self.partner_invoice_id.phone,
                     "postalCode": self.partner_invoice_id.zip
